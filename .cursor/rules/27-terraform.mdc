@@ -1,0 +1,9 @@
+---
+globs: **/*.tf,**/*.tfvars
+alwaysApply: false
+---
+# Terraform
+
+- Prefer least-privilege IAM; avoid wildcard permissions unless required.
+- Keep modules small and composable; don’t refactor unrelated resources.
+- Call out state/migration implications when changing resource names or moving modules.

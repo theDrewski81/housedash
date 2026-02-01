@@ -1,0 +1,9 @@
+---
+globs: **/Dockerfile*,**/docker-compose*.yml,**/docker-compose*.yaml
+alwaysApply: false
+---
+# Docker / Compose
+
+- Prefer small, clear layers; don’t bake secrets into images.
+- Use env vars / .env; don’t hardcode environment-specific config.
+- Favor reproducible builds and pinned base images where the repo already does so.

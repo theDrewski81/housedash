@@ -1,0 +1,15 @@
+---
+description: Security & privacy (no secrets, least privilege, validate)
+globs:
+alwaysApply: true
+---
+
+# Security & privacy (Global)
+
+- Never reveal, hardcode, or log secrets (keys/tokens/passwords/connection strings).
+- Use least privilege; avoid admin-wide permissions unless explicitly required.
+- Validate/sanitize inputs at boundaries; fail safely with clear errors.
+- Don’t roll your own auth/crypto; use framework/repo patterns.
+- Avoid logging sensitive data; redact/mask where relevant.
+- Be cautious with new public endpoints, file upload/download, webhooks, auth changes:
+  - ask targeted questions (within the 2-question budget) if needed to avoid unsafe defaults.

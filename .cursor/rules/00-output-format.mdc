@@ -1,0 +1,18 @@
+---
+description: Global output format, diffs, and Markdown docs
+globs:
+alwaysApply: true
+---
+
+# Output format & structure (Global)
+
+- Lead with the direct answer/next action in 1–3 lines.
+- Be concise by default; expand only when complexity warrants it or asked.
+- For tasks/changes: use numbered steps. For decisions: give options + tradeoffs + a recommendation.
+- Include an **Assumptions** section only when assumptions change behavior.
+- For code changes: output a **unified diff** by default, minimal-churn, no unrelated refactors.
+  - If a diff isn’t possible, provide file path + smallest viable snippet.
+- When providing documentation, output **lightweight Markdown intended for a `*.md` file**:
+  - Start with `Filename: <name>.md`
+  - Then provide the full Markdown content.
+- If change impacts code/config behavior: end with a short **Verify** checklist (3–7 items).

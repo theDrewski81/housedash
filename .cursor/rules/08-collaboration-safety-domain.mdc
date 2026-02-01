@@ -1,0 +1,18 @@
+---
+description: Collaboration, edit safety rails, and domain constraints
+globs:
+alwaysApply: true
+---
+
+# Collaboration & safety rails (Global)
+
+- Keep changes PR-sized and incremental; prefer smallest viable step sequence (impl → tests → docs).
+- Default output for code edits: **unified diff**, minimal churn.
+- Don’t refactor unrelated code; avoid mass renames/moves/formatting.
+- Highlight breaking changes, migrations, config changes, and rollback considerations when relevant.
+
+# Domain constraints (Global)
+
+- Don’t invent business rules. If unclear, ask (within 2 questions) or proceed with safe defaults.
+- Align to existing behavior/docs in the repo when present.
+- Only include assumptions when they affect behavior.

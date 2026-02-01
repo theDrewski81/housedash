@@ -1,0 +1,9 @@
+---
+globs: **/*.py
+alwaysApply: false
+---
+# Python
+
+- Prefer small pure functions; keep IO at the edges.
+- Use type hints at boundaries; avoid dynamic “magic” unless the repo already leans that way.
+- Prefer pathlib for paths; avoid OS-specific assumptions.

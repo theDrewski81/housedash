@@ -1,0 +1,10 @@
+---
+globs: **/*.ps1
+alwaysApply: false
+---
+# PowerShell
+
+- Prefer robust error handling (`$ErrorActionPreference = 'Stop'` for scripts where appropriate).
+- Avoid destructive actions unless explicitly requested and clearly guarded.
+- Quote paths; handle spaces; prefer `Join-Path` and `Resolve-Path` where helpful.
+- Keep changes minimal and consistent with existing PowerShell style in the repo.

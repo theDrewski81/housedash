@@ -1,0 +1,10 @@
+---
+globs: **/*.sh,**/*.bash,bin/**,scripts/**
+alwaysApply: false
+---
+# Shell scripts (bash/sh)
+
+- Prefer safe scripting patterns; avoid destructive actions unless explicitly requested and clearly guarded.
+- Use strict mode when appropriate for new scripts: `set -euo pipefail` (and explain if compatibility is a concern).
+- Quote variables; handle spaces in paths; prefer `$(...)` over backticks.
+- Keep scripts idempotent when possible; emit actionable errors.

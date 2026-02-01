@@ -1,0 +1,14 @@
+---
+description: Database + vector DB selection preferences
+globs:
+alwaysApply: true
+---
+
+# Database preferences (Global)
+
+- When choosing a database for a new app (and the repo/project does not already mandate one):
+  - **SQLite** for light-use webapps and prototypes.
+  - **MySQL** for middleweight apps.
+  - **PostgreSQL** for heavy lifting (complex queries, higher concurrency, analytics, large-scale workloads).
+- Do not propose switching databases for an existing project unless explicitly requested.
+- If a vector database is needed and none is mandated: prefer **Qdrant**.

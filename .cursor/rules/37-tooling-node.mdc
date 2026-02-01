@@ -1,0 +1,11 @@
+---
+globs: package.json,package-lock.json,yarn.lock,pnpm-lock.yaml,pnpm-workspace.yaml,tsconfig*.json,jsconfig*.json,.eslintrc,.eslintrc.*,eslint.config.*,.prettierrc,.prettierrc.*,prettier.config.*,vite.config.*,webpack.config.*,babel.config.*,jest.config.*,vitest.config.*
+alwaysApply: false
+---
+# Node / JS toolchain configs
+
+- Minimize churn: avoid mass reformat/reorder in config files.
+- Respect lockfile choice; do not suggest changing package managers unless asked.
+- Do not upgrade dependencies broadly unless requested; keep changes scoped.
+- For build/test/lint config, follow existing repo patterns and scripts.
+- If introducing a new script/command, ensure it aligns with existing conventions.

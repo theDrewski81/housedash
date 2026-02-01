@@ -1,0 +1,11 @@
+---
+globs: **/*.js,**/*.jsx,**/*.mjs,**/*.cjs
+alwaysApply: false
+---
+# JavaScript
+
+- Functional-first style by default; match repo conventions first.
+- Prefer small pure functions and explicit data flow.
+- Don’t convert JS↔TS unless explicitly requested.
+- Avoid adding dependencies unless necessary and justified.
+- Keep changes minimal and include tests when behavior changes (per global rule).

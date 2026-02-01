@@ -1,0 +1,11 @@
+---
+globs: **/openapi*.yml,**/openapi*.yaml,**/openapi*.json,**/swagger*.yml,**/swagger*.yaml,**/swagger*.json,**/openapi/**,**/swagger/**
+alwaysApply: false
+---
+# OpenAPI / Swagger
+
+- Treat the spec as a contract: avoid breaking changes unless explicitly requested.
+- Prefer additive changes (new fields/endpoints) over renames/removals.
+- Keep request/response schemas consistent; reuse components where the repo already does.
+- Add/update examples when modifying schemas to make intent unambiguous.
+- Call out any breaking changes clearly in the response.

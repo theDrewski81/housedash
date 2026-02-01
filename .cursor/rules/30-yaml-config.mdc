@@ -1,0 +1,11 @@
+---
+globs: config/**/*.yml,config/**/*.yaml,configs/**/*.yml,configs/**/*.yaml,settings/**/*.yml,settings/**/*.yaml,*.{yml},*.{yaml}
+alwaysApply: false
+---
+# YAML config
+
+- Preserve structure and semantics; make minimal edits only where required.
+- Keep indentation and quoting consistent with the file’s existing style.
+- Do not introduce YAML anchors/aliases unless the repo already uses them.
+- Avoid broad rewrites/reordering; touch only relevant keys/sections.
+- If changing behavior/config values, include a brief Verify checklist (outside the file) when responding.

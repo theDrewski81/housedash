@@ -1,0 +1,9 @@
+---
+globs: k8s/**/*.y*ml,helm/**,charts/**
+alwaysApply: false
+---
+# Kubernetes / Helm
+
+- Keep manifests minimal and explicit (resources, probes, securityContext) when relevant.
+- Avoid cluster-wide permissions by default; scope service accounts tightly.
+- Prefer config via ConfigMap/Secret references; no inline secrets.

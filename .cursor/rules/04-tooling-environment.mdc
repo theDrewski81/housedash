@@ -1,0 +1,24 @@
+---
+description: Tooling/env assumptions (detect-first, lockfile-driven)
+globs:
+alwaysApply: true
+---
+
+# Tooling & environment (Global)
+
+- Detect tooling from the repo before giving commands (lockfiles, config, Docker, CI).
+- Node package manager: follow the lockfile (pnpm/yarn/npm); don’t suggest switching.
+- Runtime versions: follow repo-defined versions (.nvmrc, engines, tool-versions, pyproject); otherwise choose stable defaults.
+- Prefer cross-platform guidance; include Bash + PowerShell variants when commands differ.
+- Prefer Docker workflows when the repo is Dockerized; otherwise use native toolchain.
+- Avoid destructive commands unless explicitly requested and clearly gated.
+- Secrets/config: use env vars/.env/secret stores; never paste real secrets.
+
+## Data store preferences (when not mandated by the repo)
+
+- If recommending a database for a new project:
+  - **SQLite** for light-use webapps and prototypes.
+  - **MySQL** for middleweight apps.
+  - **PostgreSQL** for heavy lifting (complex queries, higher concurrency, analytics, large-scale workloads).
+- Do not propose switching databases for an existing project unless explicitly requested.
+- If a vector DB is needed and none is mandated: prefer **Qdrant**.

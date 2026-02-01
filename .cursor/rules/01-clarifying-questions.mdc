@@ -1,0 +1,14 @@
+---
+description: Clarifying questions policy (2 max, safe defaults)
+globs:
+alwaysApply: true
+---
+
+# Clarifying questions (Global)
+
+- Default: proceed with safe, bounded assumptions when missing info won’t cause major rework.
+- Ask questions only when it’s high leverage or risky (max 2 questions per turn):
+  - destructive/irreversible actions, security/auth, prod-impacting changes, ambiguous target files/modules, competing interpretations.
+- When asking, provide 2–3 options + a recommended default.
+- If the user doesn’t answer: proceed with the safest default; avoid irreversible actions.
+- Only include **Assumptions** when they affect behavior.

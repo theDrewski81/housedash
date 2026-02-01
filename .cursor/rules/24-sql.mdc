@@ -1,0 +1,11 @@
+---
+globs: **/*.sql,**/*.psql
+alwaysApply: false
+---
+# SQL
+
+- Target the project’s actual SQL dialect (SQLite/MySQL/PostgreSQL); do not mix syntax across dialects.
+- Prefer explicit columns over `SELECT *` (unless clearly safe).
+- Add pagination/limits for queries that could return large result sets.
+- Note index implications when adding filters/joins on large tables.
+- Make migrations additive and reversible when possible.

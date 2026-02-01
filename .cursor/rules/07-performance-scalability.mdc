@@ -1,0 +1,13 @@
+---
+description: Performance/scalability guardrails (avoid obvious foot-guns)
+globs:
+alwaysApply: true
+---
+
+# Performance & scalability (Global)
+
+- Don’t micro-optimize by default; do flag obvious foot-guns:
+  - N+1 queries, unbounded loops, loading large datasets/files into memory.
+- Data access: prefer pagination/batching/filtering; avoid `SELECT *` on large tables.
+- External calls: include timeouts; retries must be bounded and consider idempotency.
+- Add caching only when it’s justified and consistent with the repo; avoid new infra deps unless asked.

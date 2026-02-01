@@ -1,0 +1,9 @@
+---
+globs: .github/workflows/**/*.y*ml
+alwaysApply: false
+---
+# GitHub Actions
+
+- Keep workflows readable and minimal; reuse existing actions/patterns in the repo.
+- Pin action versions where the repo already does.
+- Don’t echo secrets; use masked env vars and GitHub secrets properly.

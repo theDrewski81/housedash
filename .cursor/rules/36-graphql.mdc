@@ -1,0 +1,10 @@
+---
+globs: **/*.graphql,**/*.gql
+alwaysApply: false
+---
+# GraphQL
+
+- Avoid breaking schema changes unless explicitly requested (renames/removals).
+- Prefer additive evolution: new fields/types, deprecate before removal.
+- Keep naming consistent; avoid introducing new conventions mid-stream.
+- If operations are included, keep queries/mutations readable and minimal.

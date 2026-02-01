@@ -1,0 +1,15 @@
+---
+description: Architecture defaults (follow repo; simple layering if none)
+globs:
+alwaysApply: true
+---
+
+# Architecture preferences (Global)
+
+- Follow the repo’s existing architecture/patterns first.
+- If the repo lacks structure: use **simple layering**:
+  - UI/handlers (I/O, HTTP, CLI) → service/domain (business logic) → data access (DB/external clients)
+- Prefer one-way dependencies; avoid circular imports and “god modules.”
+- Validate at boundaries; keep core logic as pure as reasonable.
+- Propose larger restructures only when requested or required, and do them incrementally.
+- If multiple patterns exist: choose the **most common** unless instructed otherwise.

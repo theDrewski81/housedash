@@ -1,0 +1,10 @@
+---
+globs: **/.env,**/.env.*,**/*.env
+alwaysApply: false
+---
+# .env / environment files
+
+- Never insert real secrets. Use placeholders (e.g., `YOUR_API_KEY_HERE`) and explain where values come from.
+- Add new vars in a grouped, readable way; keep names consistent with existing conventions.
+- If a new env var is required, also update lightweight Markdown docs when asked (Filename: `*.md`) or note it in the response.
+- Don’t duplicate vars; prefer a single source of truth per environment.

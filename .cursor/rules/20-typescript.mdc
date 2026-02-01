@@ -1,0 +1,10 @@
+---
+globs: **/*.ts,**/*.tsx
+alwaysApply: false
+---
+# TypeScript
+
+- Prefer functional-first code; avoid classes unless the codebase is class-heavy in this area.
+- Prefer explicit types at boundaries (public functions, IO, API handlers); avoid `any` (use `unknown` + narrowing when needed).
+- Keep changes minimal-churn; don’t reformat unrelated blocks.
+- Use existing repo patterns for error handling (Result/throw) and keep errors actionable.

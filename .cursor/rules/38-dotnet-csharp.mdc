@@ -1,0 +1,11 @@
+---
+globs: **/*.cs
+alwaysApply: false
+---
+# C# / .NET (code)
+
+- Prefer idiomatic modern C#; match the repo’s existing style first.
+- Keep changes minimal; avoid refactors unless requested.
+- Use `async/await` correctly; avoid sync-over-async; include CancellationToken where the repo expects it.
+- Prefer dependency injection patterns already present; don’t introduce new DI frameworks.
+- Add/adjust tests when behavior changes (per global rule).

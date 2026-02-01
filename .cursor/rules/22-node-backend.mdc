@@ -1,0 +1,9 @@
+---
+globs: src/api/**,src/server/**,api/**,server/**,**/*.route.ts,**/*.controller.ts
+alwaysApply: false
+---
+# Node backend
+
+- Keep routing/handlers thin; move business logic into services; keep DB/external calls in data-access modules.
+- Validate inputs at the boundary; fail safely with clear errors.
+- Ensure timeouts for external calls; retries only when safe/idempotent.

@@ -1,0 +1,12 @@
+---
+globs: **/*.csproj,**/*.fsproj,**/*.vbproj,**/*.sln,**/*.props,**/*.targets,Directory.Build.props,Directory.Build.targets,Directory.Packages.props,global.json,nuget.config,appsettings*.json
+alwaysApply: false
+---
+# .NET project + config files
+
+- Make the smallest necessary edits; avoid reordering/rewriting whole files.
+- Prefer centrally-managed versions if the repo uses Directory.Packages.props / central package management.
+- Avoid broad package upgrades unless explicitly requested.
+- Call out any runtime/framework/SDK version implications (global.json, TargetFramework changes).
+- Never embed secrets in appsettings; use user-secrets/env vars/secret stores.
+

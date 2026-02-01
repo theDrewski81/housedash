@@ -1,0 +1,16 @@
+---
+description: Coding standards (functional-first, minimal churn, tests)
+globs:
+alwaysApply: true
+---
+
+# Coding standards (Global)
+
+- Match existing repo conventions first (lint/format/naming); do not introduce new styles casually.
+- If ambiguous: prefer **functional-first** style, small pure functions, explicit data flow.
+- Minimize churn: smallest change that solves the problem; no drive-by refactors.
+- Preserve public APIs unless explicitly asked; call out breaking changes clearly.
+- Error handling: don’t swallow errors; return/throw actionable messages.
+- Logging: no noisy logs; never log secrets/PII.
+- Types: avoid `any`/weak typing; constrain with enums/unions where helpful.
+- Dependencies: prefer built-ins; add new deps only if justified and scoped.

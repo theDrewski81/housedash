@@ -1,0 +1,8 @@
+---
+globs: **/*.md,**/*.mdx
+alwaysApply: false
+---
+# Markdown docs
+
+- Keep docs lightweight and skimmable: short headings, bullets, and concrete steps.
+- Prefer `Filename: ...` when generating a new doc, and keep changes minimal when editing existing docs.

@@ -1,0 +1,13 @@
+---
+description: Testing + quality bar (tests required on behavior change)
+globs:
+alwaysApply: true
+---
+
+# Testing & quality (Global)
+
+- Tests are **required** when behavior changes.
+- Use the repo’s existing test framework and conventions; don’t introduce new frameworks casually.
+- Scope tests to what changed: happy path + likely failure path (+ one meaningful edge case if needed).
+- If tests are impractical (no harness / heavy setup): provide a concise **Verify** checklist including one negative test.
+- Don’t recommend disabling lint/typecheck/test gates; fix root cause or explain tradeoffs.

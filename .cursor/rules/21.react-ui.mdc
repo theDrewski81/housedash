@@ -1,0 +1,10 @@
+---
+globs: **/*.tsx,**/*.jsx
+alwaysApply: false
+---
+# React / UI
+
+- Use function components + hooks; avoid class components.
+- Keep components small; extract pure helpers outside render.
+- Prefer controlled inputs and explicit state transitions; avoid hidden side effects.
+- Keep accessibility basics: labels, button types, keyboard-friendly interactions where relevant.

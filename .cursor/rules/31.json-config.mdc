@@ -1,0 +1,11 @@
+---
+globs: **/*.json,**/*.jsonc
+alwaysApply: false
+---
+# JSON / JSONC
+
+- Minimal edits: change only the keys required for the request.
+- Preserve existing formatting conventions (indentation, trailing commas if allowed, etc.).
+- Do not reorder large sections unless explicitly requested.
+- If JSONC (comments allowed), preserve comments and do not convert to strict JSON.
+- When editing config schemas, prefer additive changes and avoid breaking renames.
