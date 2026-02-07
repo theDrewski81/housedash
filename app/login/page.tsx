@@ -2,40 +2,38 @@
 
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useIsTablet } from "@/lib/hooks/useIsTablet";
 
 export default function LoginPage() {
   const router = useRouter();
+  const isTablet = useIsTablet();
+  const kioskAttempted = useRef(false);
 
   useEffect(() => {
-    // Check for kiosk token in URL or localStorage
+    // Kiosk only on tablet; phones get standard mobile (Google sign-in only)
+    if (!isTablet || kioskAttempted.current) return;
+
     const urlParams = new URLSearchParams(window.location.search);
-    const kioskToken = urlParams.get("kiosk") || localStorage.getItem("kioskToken");
+    const kioskToken =
+      urlParams.get("kiosk") ?? (typeof window !== "undefined" ? localStorage.getItem("kioskToken") : null);
 
     if (kioskToken) {
-      handleKioskLogin(kioskToken);
-    }
-  }, []);
-
-  const handleKioskLogin = async (token: string) => {
-    try {
-      const response = await fetch("/api/auth/kiosk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+      kioskAttempted.current = true;
+      signIn("kiosk", {
+        token: kioskToken,
+        callbackUrl: "/dashboard",
+        redirect: true,
+      }).then((res) => {
+        if (res?.ok) {
+          localStorage.setItem("kioskToken", kioskToken);
+        }
       });
-
-      if (response.ok) {
-        localStorage.setItem("kioskToken", token);
-        router.push("/dashboard");
-      }
-    } catch (error) {
-      console.error("Kiosk login failed:", error);
     }
-  };
+  }, [isTablet]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-24">
       <div className="z-10 max-w-md w-full">
         <h1 className="text-4xl font-bold mb-8 text-center">Home Dashboard</h1>
         <div className="bg-gray-800 rounded-lg p-8">
@@ -45,9 +43,11 @@ export default function LoginPage() {
           >
             Sign in with Google
           </button>
-          <p className="text-sm text-gray-400 mt-4 text-center">
-            Or use kiosk mode for tablet access
-          </p>
+          {isTablet && (
+            <p className="text-sm text-gray-400 mt-4 text-center">
+              Or use kiosk mode (tablet): open with <code className="text-gray-300">?kiosk=YOUR_TOKEN</code>
+            </p>
+          )}
         </div>
       </div>
     </main>
