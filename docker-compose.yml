@@ -20,6 +20,7 @@ services:
       - housedash-network
 
   migrate:
+    image: housedash-migrate:latest
     build:
       context: .
       dockerfile: Dockerfile

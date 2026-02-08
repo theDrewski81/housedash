@@ -45,9 +45,10 @@ Run app + Postgres with Docker Compose:
 docker compose up -d
 ```
 
-**Run DB migrations** (e.g. after first deploy or schema changes; uses the same `DATABASE_URL` as the app):
+**Run DB migrations** (e.g. after first deploy or schema changes; uses the same `DATABASE_URL` as the app). Build the migrate image first (Debian-based so Prisma runs correctly), then run:
 
 ```bash
+docker compose build migrate
 docker compose --profile tools run --rm migrate
 ```
 
