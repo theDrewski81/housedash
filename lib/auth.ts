@@ -7,6 +7,12 @@ import { prisma } from "./db/prisma";
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
   trustHost: true, // required when behind Cloudflare Tunnel / reverse proxy
+  debug: process.env.NEXTAUTH_DEBUG === "1",
+  logger: {
+    error(code, metadata) {
+      console.error("[NextAuth]", code, metadata);
+    },
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

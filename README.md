@@ -69,20 +69,27 @@ Set required env vars (e.g. in `.env` at repo root) before starting. App is on p
 
 ## Troubleshooting: login sends me back to the login screen
 
-If you sign in with Google but end up on the login page again:
+If you sign in with Google but end up on the login page again (sometimes with `?error=Callback` in the URL):
 
 1. **NEXTAUTH_URL must match the browser URL**  
-   Set `NEXTAUTH_URL` in `.env` to the **exact** URL you use to open the app (no trailing slash).  
-   - Local: `http://localhost:3000`  
-   - Cloudflare Tunnel: `https://your-tunnel-host.trycloudflare.com`  
-   If you use a tunnel but leave `NEXTAUTH_URL=http://localhost:3000`, the session cookie will not match and you’ll be sent back to login.
+   Set `NEXTAUTH_URL` in `.env` to the **exact** URL you use to open the app (no trailing slash), e.g. `https://dash.susknet.com`. Restart the app after changing.
 
 2. **Google OAuth redirect URI**  
    In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your OAuth 2.0 Client ID → **Authorized redirect URIs**, add exactly:  
-   `{NEXTAUTH_URL}/api/auth/callback/google`  
-   Example for a tunnel: `https://your-tunnel-host.trycloudflare.com/api/auth/callback/google`
+   `https://dash.susknet.com/api/auth/callback/google` (or `{NEXTAUTH_URL}/api/auth/callback/google`).
 
-3. **Restart the app** after changing `.env` so the new `NEXTAUTH_URL` is picked up.
+3. **Reverse proxy must forward the public host**  
+   The `error=Callback` often happens when the app receives a different `Host` than the public URL (e.g. internal hostname or `localhost`). Then the cookie set at sign-in is for the wrong domain and is not sent when Google redirects back.  
+   Ensure your reverse proxy (nginx, Caddy, Cloudflare Tunnel, etc.) forwards to the app:
+   - **Host**: the public hostname (e.g. `Host: dash.susknet.com`)
+   - **X-Forwarded-Proto**: `https`
+   - **X-Forwarded-Host**: `dash.susknet.com` (optional but recommended)  
+   Example for **nginx** `proxy_pass`: `proxy_set_header Host $host; proxy_set_header X-Forwarded-Proto $scheme;`  
+   Example for **Caddy**: reverse_proxy usually sets these automatically.  
+   Example for **Cloudflare Tunnel**: the tunnel forwards the original Host by default; if you proxy again behind it, that inner proxy must forward Host.
+
+4. **See the exact error in logs**  
+   Set `NEXTAUTH_DEBUG=1` in `.env`, restart the app, try signing in again, then run `docker compose logs app` (or `docker logs housedash-app`) and look for `[NextAuth]` lines. That will show the real cause (e.g. state mismatch, missing code_verifier, or adapter error).
 
 ## Docs
 
