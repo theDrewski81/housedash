@@ -2,8 +2,8 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 
-# Install dependencies needed for native modules
-RUN apk add --no-cache libc6-compat
+# Install dependencies needed for native modules and Prisma (OpenSSL for migrate)
+RUN apk add --no-cache libc6-compat openssl
 
 # Copy package files
 COPY package.json package-lock.json ./
