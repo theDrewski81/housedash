@@ -36,9 +36,12 @@ COPY prisma ./prisma
 ENV DATABASE_URL=""
 ENTRYPOINT ["npx", "prisma", "migrate", "deploy"]
 
-# Stage 3: Runner
-FROM node:20-alpine AS runner
+# Stage 3: Runner (Alpine 3.18 has openssl1.1-compat; 3.19+ dropped it)
+FROM node:20-alpine3.18 AS runner
 WORKDIR /app
+
+# Prisma query engine needs libssl.so.1.1
+RUN apk add --no-cache openssl1.1-compat
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
