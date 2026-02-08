@@ -4,15 +4,16 @@ import { prisma } from "@/lib/db/prisma";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await requireAuth();
     const body = await request.json();
 
     const dinner = await prisma.dinner.update({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
       data: {
@@ -39,14 +40,15 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const user = await requireAuth();
 
     await prisma.dinner.delete({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
     });
