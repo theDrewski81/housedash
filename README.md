@@ -42,7 +42,13 @@ Household dashboard: weather, schedule, dinners, groceries, and budget. Sign in 
 Run app + Postgres with Docker Compose:
 
 ```bash
-docker-compose up -d
+docker compose up -d
+```
+
+**Run DB migrations** (e.g. after first deploy or schema changes; uses the same `DATABASE_URL` as the app):
+
+```bash
+docker compose --profile tools run --rm migrate
 ```
 
 Set required env vars (e.g. in `.env` at repo root) before starting. App is on port 3000; DB on 5432.
@@ -57,7 +63,8 @@ Set required env vars (e.g. in `.env` at repo root) before starting. App is on p
 | `npm run lint` | ESLint                 |
 | `npm run db:studio` | Prisma Studio (DB UI) |
 | `npm run db:push` | Push schema (no migrations) |
-| `npm run db:migrate` | Create/run migrations |
+| `npm run db:migrate` | Create/run migrations (dev) |
+| `npm run db:migrate:deploy` | Apply migrations (prod; use when Node is installed locally) |
 
 ## Docs
 

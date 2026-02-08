@@ -26,6 +26,13 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
+# Stage 2.5: Migrate (has Prisma CLI for migrate deploy)
+FROM deps AS migrator
+WORKDIR /app
+COPY prisma ./prisma
+ENV DATABASE_URL=""
+ENTRYPOINT ["npx", "prisma", "migrate", "deploy"]
+
 # Stage 3: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app

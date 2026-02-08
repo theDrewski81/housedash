@@ -19,6 +19,21 @@ services:
     networks:
       - housedash-network
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-housedash}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - housedash-network
+    profiles:
+      - tools
+
   app:
     build:
       context: .
