@@ -26,9 +26,11 @@ RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Stage 2.5: Migrate (has Prisma CLI for migrate deploy)
-FROM deps AS migrator
+# Stage 2.5: Migrate (Debian base so Prisma schema engine runs reliably)
+FROM node:20-bookworm-slim AS migrator
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY prisma ./prisma
 ENV DATABASE_URL=""
 ENTRYPOINT ["npx", "prisma", "migrate", "deploy"]
