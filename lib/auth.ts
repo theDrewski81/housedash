@@ -37,6 +37,12 @@ export const authOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Send users to the intended path after sign-in (e.g. /dashboard)
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl + "/dashboard";
+    },
     async session({ session, user }) {
       if (session.user) {
         session.user.id = user?.id ?? (session.user as { id?: string }).id;
