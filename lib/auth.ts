@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "./db/prisma";
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   adapter: PrismaAdapter(prisma),
   trustHost: true, // required when behind Cloudflare Tunnel / reverse proxy
   providers: [
@@ -50,4 +50,4 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "database",
   },
-};
+} as NextAuthOptions;
