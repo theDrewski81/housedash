@@ -29,6 +29,7 @@ RUN npm run build
 # Stage 2.5: Migrate (Debian base so Prisma schema engine runs reliably)
 FROM node:20-bookworm-slim AS migrator
 WORKDIR /app
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY prisma ./prisma
