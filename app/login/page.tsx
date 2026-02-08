@@ -12,10 +12,6 @@ export default function LoginPage() {
   const kioskAttempted = useRef(false);
 
   useEffect(() => {
-    // #region agent log
-    const payload = { hypothesisId: "H3", location: "app/login/page.tsx:useEffect", message: "login page session status", data: { status }, timestamp: Date.now() };
-    fetch("http://127.0.0.1:7242/ingest/6192d96a-a422-4919-bc86-ce84fa9cdc63", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
-    // #endregion
     if (status === "authenticated") {
       router.replace("/dashboard");
     }

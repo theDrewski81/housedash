@@ -44,21 +44,11 @@ export const authOptions = {
   ],
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // #region agent log
-      const returnUrl = url.startsWith("/") ? `${baseUrl}${url}` : (new URL(url).origin === baseUrl ? url : baseUrl + "/dashboard");
-      const payload = { hypothesisId: "H4", location: "lib/auth.ts:redirect", message: "redirect callback", data: { url, baseUrl, returnUrl }, timestamp: Date.now() };
-      fetch("http://127.0.0.1:7242/ingest/6192d96a-a422-4919-bc86-ce84fa9cdc63", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
-      console.log("[DEBUG]", JSON.stringify(payload));
-      // #endregion
-      return returnUrl;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl + "/dashboard";
     },
     async session({ session, user }) {
-      // #region agent log
-      const userId = user?.id ?? (session?.user as { id?: string } | undefined)?.id;
-      const payload = { hypothesisId: "H1,H5", location: "lib/auth.ts:session", message: "session callback after sign-in", data: { hasSession: !!session, hasUser: !!user, userId: userId ?? null }, timestamp: Date.now() };
-      fetch("http://127.0.0.1:7242/ingest/6192d96a-a422-4919-bc86-ce84fa9cdc63", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
-      console.log("[DEBUG]", JSON.stringify(payload));
-      // #endregion
       if (session.user) {
         session.user.id = user?.id ?? (session.user as { id?: string }).id;
       }
