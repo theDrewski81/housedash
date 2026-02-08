@@ -1,14 +1,21 @@
 "use client";
 
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useIsTablet } from "@/lib/hooks/useIsTablet";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { status } = useSession();
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
 
   useEffect(() => {
     // Kiosk only on tablet; phones get standard mobile (Google sign-in only)
