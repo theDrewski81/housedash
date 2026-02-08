@@ -95,8 +95,16 @@ docker compose build migrate
 docker compose --profile tools run --rm migrate
 ```
 
-Then restart the app: `docker compose up -d --force-recreate app`.  
-If migrate says **"No pending migrations"** but the app still reports missing tables, the migration history may be out of sync (e.g. DB was recreated). Reset and re-apply:
+Then restart the app: `docker compose up -d --force-recreate app`.
+
+If migrate says **"No migration found in prisma/migrations"**, the migrate image was built without the migrations folder (e.g. cached build). Rebuild the migrate image without cache so it copies the current repo (including `prisma/migrations/`), then run migrate again:
+
+```bash
+docker compose build --no-cache migrate
+docker compose --profile tools run --rm migrate
+```
+
+If migrate says **"No pending migrations"** but the app still reports missing tables, the migration was recorded as applied but tables are missing (e.g. DB was recreated). You can re-apply by marking the migration as rolled back then deploying again (only if the migration was previously applied):
 
 ```bash
 docker compose run --rm --entrypoint sh migrate -c "npx prisma migrate resolve --rolled-back 20250207000000_init && npx prisma migrate deploy"
