@@ -135,6 +135,13 @@ export const authOptions = {
         const u = user as { role?: UserRole; status?: UserStatus };
         if (u?.role != null) (session.user as { role?: UserRole }).role = u.role;
         if (u?.status != null) (session.user as { status?: UserStatus }).status = u.status;
+        // If this is the only user in the system, treat as admin so they can access admin and set their role
+        if ((session.user as { role?: UserRole }).role !== "admin" && user?.id) {
+          const userCount = await prisma.user.count();
+          if (userCount === 1) {
+            (session.user as { role?: UserRole }).role = "admin";
+          }
+        }
       }
       return session;
     },

@@ -29,10 +29,11 @@ export async function requireAdmin(): Promise<User> {
     err.status = 401;
     throw err;
   }
-  if (user.role !== "admin") {
-    const err = new Error("Forbidden") as Error & { status?: number };
-    err.status = 403;
-    throw err;
-  }
-  return user;
+  if (user.role === "admin") return user;
+  // Single user in the system is treated as admin so they can access admin and set their role
+  const userCount = await prisma.user.count();
+  if (userCount === 1) return user;
+  const err = new Error("Forbidden") as Error & { status?: number };
+  err.status = 403;
+  throw err;
 }
