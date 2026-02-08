@@ -1,15 +1,18 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef } from "react";
 import { useIsTablet } from "@/lib/hooks/useIsTablet";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { status } = useSession();
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
+  const errorParam = searchParams.get("error");
+  const showAccountCreationDisabled = !!errorParam;
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -44,6 +47,11 @@ export default function LoginPage() {
       <div className="z-10 max-w-md w-full">
         <h1 className="text-4xl font-bold mb-8 text-center">Home Dashboard</h1>
         <div className="bg-gray-800 rounded-lg p-8">
+          {showAccountCreationDisabled && (
+            <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
+              Sign-in failed. New accounts may not be accepted at this time. Contact an administrator if you need access.
+            </p>
+          )}
           <button
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
@@ -58,5 +66,17 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-24">
+        <div className="text-gray-400">Loading...</div>
+      </main>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

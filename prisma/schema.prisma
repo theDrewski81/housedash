@@ -10,25 +10,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  name          String?
-  image         String?
-  kioskToken    String?   @unique @map("kiosk_token")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+enum UserRole {
+  admin
+  super_user
+  user
+  read_only
+}
 
-  accounts      Account[]
-  sessions      Session[]
-  dinners       Dinner[]
-  groceries     Grocery[]
-  budgetIncomes BudgetIncome[]
+enum UserStatus {
+  active
+  inactive
+  pending_approval
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  emailVerified DateTime?   @map("email_verified")
+  name          String?
+  firstName     String?     @map("first_name")
+  lastName      String?     @map("last_name")
+  image         String?
+  kioskToken    String?     @unique @map("kiosk_token")
+  role          UserRole?
+  status        UserStatus?  @default(active)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  accounts       Account[]
+  sessions       Session[]
+  dinners        Dinner[]
+  groceries      Grocery[]
+  budgetIncomes  BudgetIncome[]
   budgetExpenses BudgetExpense[]
-  preferences   UserPreferences?
+  preferences    UserPreferences?
+  auditLogsDone  AdminAuditLog[] @relation("AdminAuditLogAdmin")
 
   @@map("users")
+}
+
+model AppConfig {
+  id                   String   @id @default(cuid())
+  allowAccountCreation  Boolean  @default(false) @map("allow_account_creation")
+  auditUserCrud        Boolean  @default(false) @map("audit_user_crud")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
+}
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String   @map("admin_user_id")
+  action      String
+  targetUserId String? @map("target_user_id")
+  details     Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  adminUser User @relation("AdminAuditLogAdmin", fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("admin_audit_log")
 }
 
 model Account {

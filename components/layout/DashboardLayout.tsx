@@ -1,6 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -11,6 +13,8 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   if (status === "loading") {
     return (
@@ -30,7 +34,38 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-white">Home Dashboard</h1>
+            <div className="flex items-center gap-6">
+              <Link
+                href="/dashboard"
+                className="text-2xl font-bold text-white hover:text-gray-200"
+              >
+                Home Dashboard
+              </Link>
+              {isAdmin && (
+                <nav className="flex gap-4">
+                  <Link
+                    href="/dashboard/admin/users"
+                    className={`text-sm font-medium ${
+                      pathname?.startsWith("/dashboard/admin/users")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    User management
+                  </Link>
+                  <Link
+                    href="/dashboard/admin/logs"
+                    className={`text-sm font-medium ${
+                      pathname?.startsWith("/dashboard/admin/logs")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Logs
+                  </Link>
+                </nav>
+              )}
+            </div>
             <div className="flex items-center gap-4">
               {session.user?.image && (
                 <img
