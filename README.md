@@ -39,20 +39,15 @@ Household dashboard: weather, schedule, dinners, groceries, and budget. Sign in 
 
 ## Docker
 
-Run app + Postgres with Docker Compose:
-
-```bash
-docker compose up -d
-```
-
-**Run DB migrations** (e.g. after first deploy or schema changes; uses the same `DATABASE_URL` as the app). Build the migrate image first (Debian-based so Prisma runs correctly), then run:
+**First-time or after schema changes:** run migrations, then start the app:
 
 ```bash
 docker compose build migrate
 docker compose --profile tools run --rm migrate
+docker compose up -d
 ```
 
-Set required env vars (e.g. in `.env` at repo root) before starting. App is on port 3000; DB on 5432.
+**Already migrated:** `docker compose up -d`. Set required env vars (e.g. in `.env` at repo root). App is on port 3000; DB on 5432.
 
 ## Scripts
 
@@ -90,6 +85,22 @@ If you sign in with Google but end up on the login page again (sometimes with `?
 
 4. **See the exact error in logs**  
    Set `NEXTAUTH_DEBUG=1` in `.env`, restart the app, try signing in again, then run `docker compose logs app` (or `docker logs housedash-app`) and look for `[NextAuth]` lines. That will show the real cause (e.g. state mismatch, missing code_verifier, or adapter error).
+
+### "The table `public.accounts` does not exist" (or other tables)
+
+The database schema has not been applied. Run migrations (same `DATABASE_URL` as the app):
+
+```bash
+docker compose build migrate
+docker compose --profile tools run --rm migrate
+```
+
+Then restart the app: `docker compose up -d --force-recreate app`.  
+If migrate says **"No pending migrations"** but the app still reports missing tables, the migration history may be out of sync (e.g. DB was recreated). Reset and re-apply:
+
+```bash
+docker compose run --rm --entrypoint sh migrate -c "npx prisma migrate resolve --rolled-back 20250207000000_init && npx prisma migrate deploy"
+```
 
 ## Docs
 
