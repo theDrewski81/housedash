@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -14,7 +14,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setIsAdmin(false);
+      return;
+    }
+    fetch("/api/admin/me")
+      .then((res) => res.ok && res.json())
+      .then((data) => setIsAdmin(!!data?.isAdmin))
+      .catch(() => setIsAdmin(false));
+  }, [session?.user?.id]);
 
   if (status === "loading") {
     return (
