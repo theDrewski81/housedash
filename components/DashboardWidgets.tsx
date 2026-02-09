@@ -68,9 +68,11 @@ export default function DashboardWidgets() {
     return (
       <div
         ref={containerRef}
-        className="relative w-full"
+        className="relative flex w-full flex-col"
+        style={{ minHeight: "calc(100vh - 8rem)" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        data-widget-expanded-view
       >
         {/* Arrow buttons: visible on md and up */}
         <button
@@ -90,12 +92,14 @@ export default function DashboardWidgets() {
           <ChevronRightIcon className="h-6 w-6" />
         </button>
 
-        {/* Expanded view container: viewport-aware height; equal top/bottom from main's py-8 on md+; minimal padding on mobile */}
-        <div className="w-full max-h-[calc(100vh-8rem)] overflow-auto py-4 md:py-0">
-          <CurrentWidget
-            isExpanded={true}
-            onExpandToggle={() => setExpandedIndex(null)}
-          />
+        {/* Expanded view: fills full content area below header (green zone); equal top/bottom padding from main; inner content scrolls */}
+        <div className="flex min-h-0 flex-1 flex-col py-4 md:py-0">
+          <div className="min-h-0 flex-1 overflow-auto">
+            <CurrentWidget
+              isExpanded={true}
+              onExpandToggle={() => setExpandedIndex(null)}
+            />
+          </div>
         </div>
       </div>
     );
