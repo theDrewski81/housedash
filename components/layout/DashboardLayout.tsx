@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -14,18 +14,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    if (!session?.user?.id) {
-      setIsAdmin(false);
-      return;
-    }
-    fetch("/api/admin/me")
-      .then((res) => res.ok && res.json())
-      .then((data) => setIsAdmin(!!data?.isAdmin))
-      .catch(() => setIsAdmin(false));
-  }, [session?.user?.id]);
+  // Show admin nav to all logged-in users; admin routes are protected by requireAdmin() on the server
+  const showAdminNav = !!session?.user;
 
   if (status === "loading") {
     return (
@@ -52,7 +42,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 Home Dashboard
               </Link>
-              {isAdmin && (
+              {showAdminNav && (
                 <nav className="flex gap-4">
                   <Link
                     href="/dashboard/admin/users"
