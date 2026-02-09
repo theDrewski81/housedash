@@ -14,8 +14,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  // Show admin nav to all logged-in users; admin routes are protected by requireAdmin() on the server
-  const showAdminNav = !!session?.user;
 
   if (status === "loading") {
     return (
@@ -31,7 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-900" data-dashboard-layout="with-admin-nav">
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -42,30 +40,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 Home Dashboard
               </Link>
-              {showAdminNav && (
-                <nav className="flex gap-4">
-                  <Link
-                    href="/dashboard/admin/users"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith("/dashboard/admin/users")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    User management
-                  </Link>
-                  <Link
-                    href="/dashboard/admin/logs"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith("/dashboard/admin/logs")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Logs
-                  </Link>
-                </nav>
-              )}
+              <nav className="flex items-center gap-4" aria-label="Admin">
+                <Link
+                  href="/dashboard/admin/users"
+                  className={`text-sm font-medium ${
+                    pathname?.startsWith("/dashboard/admin/users")
+                      ? "text-white"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  User management
+                </Link>
+                <Link
+                  href="/dashboard/admin/logs"
+                  className={`text-sm font-medium ${
+                    pathname?.startsWith("/dashboard/admin/logs")
+                      ? "text-white"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Logs
+                </Link>
+              </nav>
             </div>
             <div className="flex items-center gap-4">
               {session.user?.image && (
