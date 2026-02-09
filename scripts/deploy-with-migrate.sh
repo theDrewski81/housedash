@@ -15,6 +15,9 @@ docker compose build --no-cache migrate
 echo "==> Applying migrations..."
 docker compose --profile tools run --rm migrate
 
+echo "==> Rebuilding app image (Next.js build runs inside image)..."
+docker compose build app
+
 echo "==> Restarting app..."
 docker compose up -d --force-recreate app
 
