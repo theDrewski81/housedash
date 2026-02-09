@@ -4,7 +4,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 
 ## Project in one sentence
 
-**housedash** is a household dashboard web app: weather, schedule, dinners, groceries, and budget. Sign in with Google; optional kiosk mode for a tablet.
+**housedash** is a household dashboard web app: weather, schedule, dinners, groceries, and budget. Sign in with Google; optional kiosk mode for a tablet. Admin user management (first-sign-in admin, approval queue, roles, audit log) is implemented.
 
 ## Where to start when resuming
 
@@ -15,32 +15,35 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 | `docs/KIOSK-SETUP.md` | Kiosk (tablet-only): KIOSK_TOKEN, link user in DB, tablet vs phone. |
 | `docs/CLOUDFLARE-TUNNEL.md` | Cloudflare Tunnel 502 fix: ingress, Host headers, health check. |
 | `app/dashboard/page.tsx` | Dashboard entry: layout + five widgets. |
-| `prisma/schema.prisma` | Data model: User, sessions, Dinners, Groceries, BudgetIncome/BudgetExpense, UserPreferences. |
-| `app/api/` | API routes for auth, health, SSE, user preferences, and each widget (CRUD where applicable). |
+| `app/dashboard/admin/users/page.tsx` | User management UI: account-creation toggle, user list, approval queue, audit toggle. |
+| `app/dashboard/admin/logs/page.tsx` | Admin audit log (read-only). |
+| `prisma/schema.prisma` | Data model: User (role, status, firstName, lastName), AppConfig, AdminAuditLog, sessions, Dinners, Groceries, Budget, UserPreferences. |
+| `lib/auth.ts` | NextAuth + custom adapter (first user = admin, allowAccountCreation, pending_approval). |
+| `app/api/admin/` | Admin APIs: settings, users (list/bulk/delete/sign-out), logs, me (isAdmin). |
 | `docker-compose.yml` | Run Postgres + app; migrate via `--profile tools`; set env in `.env`. |
 
 ## Current state
 
-- **Done:** Next.js 14 app with dashboard, five widgets (Weather, Schedule, Dinners, Groceries, Budget), NextAuth (Google), Prisma + PostgreSQL, user preferences (colors/background), kiosk auth, SSE endpoint, Docker Compose (Postgres + app + migrate), health API. README has full setup and troubleshooting (login callback, missing tables, migration rollback). Initial DB migration (`20250207000000_init`) for user/session tables.
-- **Recently changed (uncommitted or last commit):** `app/dashboard/layout.tsx`, `app/login/page.tsx`, `lib/auth.ts` — logging in dashboard layout and login page, auth redirect callback logging; `.gitignore` and migration setup noted in last commit.
+- **Done:** Next.js 15 app with dashboard, five widgets (Weather, Schedule, Dinners, Groceries, Budget), NextAuth (Google + kiosk), Prisma + PostgreSQL, user preferences, kiosk auth, SSE, Docker Compose, health API. **User management:** first Google sign-in becomes admin and locks account creation; toggle to allow new sign-ups (→ approval queue); user list (edit name/status/role, delete, sign out); approval queue (approve/reject + role); audit log (Logs view) with “Log user management actions” toggle (default off). Migrations: `20250207000000_init`, `20250208000000_add_user_management_and_admin`. Next 15 async `params` used in all dynamic API routes. Security: npm audit 0 vulnerabilities (Next 15, glob override).
+- **Recently:** Admin nav (“User management”, “Logs”) visible to all logged-in users; admin routes protected by `requireAdmin()` (admin role or single user). After deploy, use `docker compose build --no-cache app` if admin links don’t appear.
 
 ## Architecture / stack
 
 | Layer | Choice |
 |-------|--------|
-| Frontend | Next.js 14 (App Router), React 18, Tailwind, Recharts, @dnd-kit, TanStack Query |
-| Auth | NextAuth 4 (Google OAuth); kiosk token for tablet mode |
-| Data | PostgreSQL via Prisma |
+| Frontend | Next.js 15 (App Router), React 18, Tailwind, Recharts, @dnd-kit, TanStack Query |
+| Auth | NextAuth 4 (Google OAuth); kiosk token; custom adapter for first-admin and approval flow |
+| Data | PostgreSQL via Prisma (User roles/status, AppConfig, AdminAuditLog) |
 | External | OpenWeatherMap, Google Calendar API |
-| Run | Node; Docker Compose for local (postgres + app), `Dockerfile` for app; optional Cloudflare Tunnel |
+| Run | Node; Docker Compose (postgres + app), `Dockerfile`; optional Cloudflare Tunnel |
 
-Deploy flow and hosting are not defined in the repo (see `scripts/deploy-with-migrate.sh` for a deploy pattern).
+Deploy: run migrations (e.g. `npm run db:migrate:deploy` with project Prisma, not global Prisma 7); rebuild app with `--no-cache` if UI changes don’t show.
 
 ## Open / next
 
-- Confirm next feature priorities (e.g. more widgets, notifications, multi-user/household).
+- **Before calling user-management done:** Gate admin nav so only admins see “User management” / “Logs” (e.g. use `GET /api/admin/me` or `session.user.role`). See TODO in `components/layout/DashboardLayout.tsx`.
+- Confirm next feature priorities (e.g. RBAC, more widgets, notifications).
 - Optional: formal design/PRD or deployment docs under `docs/`.
-- Pick up from modified auth/dashboard/login files if continuing debug or cleanup.
 
 ## Workspace conventions
 
