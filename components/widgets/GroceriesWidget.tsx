@@ -12,7 +12,12 @@ interface Grocery {
   isComplete: boolean;
 }
 
-export default function GroceriesWidget() {
+interface GroceriesWidgetProps {
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
+}
+
+export default function GroceriesWidget({ isExpanded, onExpandToggle }: GroceriesWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -248,6 +253,8 @@ export default function GroceriesWidget() {
       title="Groceries"
       expandedContent={expandedContent}
       className="lg:col-span-1"
+      isExpanded={isExpanded}
+      onExpandToggle={onExpandToggle}
     >
       {currentContent}
     </Widget>

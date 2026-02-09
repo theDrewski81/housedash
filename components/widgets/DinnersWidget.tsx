@@ -100,7 +100,12 @@ function SortableDinnerItem({
   );
 }
 
-export default function DinnersWidget() {
+interface DinnersWidgetProps {
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
+}
+
+export default function DinnersWidget({ isExpanded, onExpandToggle }: DinnersWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newMeal, setNewMeal] = useState({
@@ -296,6 +301,8 @@ export default function DinnersWidget() {
       title="Dinners"
       expandedContent={weeklyContent}
       className="lg:col-span-1"
+      isExpanded={isExpanded}
+      onExpandToggle={onExpandToggle}
     >
       {currentContent}
     </Widget>

@@ -8,6 +8,9 @@ interface WidgetProps {
   children: ReactNode;
   expandedContent?: ReactNode;
   className?: string;
+  /** When provided with onExpandToggle, expansion is controlled by the parent. */
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
 }
 
 export default function Widget({
@@ -15,8 +18,13 @@ export default function Widget({
   children,
   expandedContent,
   className = "",
+  isExpanded: isExpandedProp,
+  onExpandToggle,
 }: WidgetProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isControlled = isExpandedProp !== undefined && onExpandToggle !== undefined;
+  const isExpanded = isControlled ? isExpandedProp : internalExpanded;
+  const handleToggle = isControlled ? onExpandToggle : () => setInternalExpanded((v) => !v);
 
   return (
     <div
@@ -26,7 +34,7 @@ export default function Widget({
         <h2 className="text-xl font-semibold text-white">{title}</h2>
         {expandedContent && (
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={handleToggle}
             className="text-gray-400 hover:text-white transition-colors"
             aria-label={isExpanded ? "Collapse" : "Expand"}
           >

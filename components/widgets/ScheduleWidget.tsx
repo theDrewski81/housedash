@@ -5,7 +5,12 @@ import Widget from "@/components/ui/Widget";
 import { ScheduleData } from "@/lib/api/calendar";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
-export default function ScheduleWidget() {
+interface ScheduleWidgetProps {
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
+}
+
+export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleWidgetProps = {}) {
   const [schedule, setSchedule] = useState<ScheduleData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +114,8 @@ export default function ScheduleWidget() {
       title="Schedule"
       expandedContent={weeklyContent}
       className="lg:col-span-1"
+      isExpanded={isExpanded}
+      onExpandToggle={onExpandToggle}
     >
       {currentContent}
     </Widget>

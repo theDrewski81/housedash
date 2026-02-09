@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import Widget from "@/components/ui/Widget";
 import { WeatherData } from "@/lib/api/weather";
 
-export default function WeatherWidget() {
+interface WeatherWidgetProps {
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
+}
+
+export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWidgetProps = {}) {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +115,8 @@ export default function WeatherWidget() {
       title="Weather"
       expandedContent={forecastContent}
       className="lg:col-span-1"
+      isExpanded={isExpanded}
+      onExpandToggle={onExpandToggle}
     >
       {currentContent}
     </Widget>
