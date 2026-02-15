@@ -4,7 +4,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 
 ## Project in one sentence
 
-**housedash** is a household dashboard web app: weather, schedule, dinners, groceries, and budget. Sign in with Google; optional kiosk mode for a tablet. Admin user management (first-sign-in admin, approval queue, roles, audit log) is implemented.
+**housedash** is a household dashboard web app: weather, schedule, dinners, groceries, and budget. Sign in with Google; optional kiosk mode for a tablet. Admin user management (first-sign-in admin, approval queue, roles, audit log, Add New User) is implemented.
 
 ## Where to start when resuming
 
@@ -15,17 +15,19 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 | `docs/KIOSK-SETUP.md` | Kiosk (tablet-only): KIOSK_TOKEN, link user in DB, tablet vs phone. |
 | `docs/CLOUDFLARE-TUNNEL.md` | Cloudflare Tunnel 502 fix: ingress, Host headers, health check. |
 | `app/dashboard/page.tsx` | Dashboard entry: layout + five widgets. |
-| `app/dashboard/admin/users/page.tsx` | User management UI: account-creation toggle, user list, approval queue, audit toggle. |
-| `app/dashboard/admin/logs/page.tsx` | Admin audit log (read-only). |
-| `prisma/schema.prisma` | Data model: User (role, status, firstName, lastName), AppConfig, AdminAuditLog, sessions, Dinners, Groceries, Budget, UserPreferences. |
-| `lib/auth.ts` | NextAuth + custom adapter (first user = admin, allowAccountCreation, pending_approval). |
-| `app/api/admin/` | Admin APIs: settings, users (list/bulk/delete/sign-out), logs, me (isAdmin). |
+| `components/DashboardWidgets.tsx` | Widget grid and expanded view; Prev/Next nav with inset content. |
+| `app/dashboard/admin/users/page.tsx` | User management: settings, Add New User, user list, approval queue. |
+| `app/dashboard/admin/logs/page.tsx` | Admin audit log; top "Log settings" box with "Log user management actions" toggle. |
+| `prisma/schema.prisma` | Data model: User (role, status), AppConfig, AdminAuditLog, sessions, Dinners, Groceries, Budget, UserPreferences. |
+| `lib/auth.ts` | NextAuth + custom adapter (first user = admin, allowAccountCreation, pending_approval, getUserByEmail case-insensitive, createUser one-per-email). |
+| `app/api/admin/` | Admin APIs: settings, users (GET/POST/PATCH, delete by id), logs, me (isAdmin). |
 | `docker-compose.yml` | Run Postgres + app; migrate via `--profile tools`; set env in `.env`. |
 
 ## Current state
 
-- **Done:** Next.js 15 app with dashboard, five widgets (Weather, Schedule, Dinners, Groceries, Budget), NextAuth (Google + kiosk), Prisma + PostgreSQL, user preferences, kiosk auth, SSE, Docker Compose, health API. **User management:** first Google sign-in becomes admin and locks account creation; toggle to allow new sign-ups (→ approval queue); user list (edit name/status/role, delete, sign out); approval queue (approve/reject + role); audit log (Logs view) with “Log user management actions” toggle (default off). Migrations: `20250207000000_init`, `20250208000000_add_user_management_and_admin`. Next 15 async `params` used in all dynamic API routes. Security: npm audit 0 vulnerabilities (Next 15, glob override).
-- **Recently:** Admin nav (“User management”, “Logs”) gated by `session.user.role === "admin"` in DashboardLayout so only admins see those links; admin routes protected by `requireAdmin()`. After deploy, use `docker compose build --no-cache app` if admin links don’t appear.
+- **Done:** Next.js 15 app with dashboard, five widgets (Weather, Schedule, Dinners, Groceries, Budget), NextAuth (Google + kiosk), Prisma + PostgreSQL, user preferences, kiosk auth, SSE, Docker Compose, health API. Widget expansion and Prev/Next navigation with content inset (`md:px-14`) so buttons do not overlap widget content.
+- **User management:** First Google sign-in becomes admin; toggle to allow new sign-ups (new users go to approval queue, one per email). Add New User dialog (email, first/last name, role, status) creates user in DB; they can sign in with Google (case-insensitive email). User list: edit name/status/role, full delete, sign out. Approval queue: approve (→ active, in list) or reject (user deleted). "Log user management actions" lives on Logs page (top Log settings box). Admin nav gated by `session.user.role === "admin"` in DashboardLayout; admin routes use `requireAdmin()`. Success messages: "User x has been added.", "User x has been deleted.", "User x role has changed to … This change will be visible on their next login." (from PATCH results and DELETE/POST responses).
+- **Auth adapter:** `getUserByEmail` case-insensitive; `createUser` when allowAccountCreation is true checks for existing user by email (case-insensitive) and returns them (no duplicate queue entries), else creates with `pending_approval`. Migrations: `20250207000000_init`, `20250208000000_add_user_management_and_admin`.
 
 ## Architecture / stack
 
@@ -37,11 +39,10 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 | External | OpenWeatherMap, Google Calendar API |
 | Run | Node; Docker Compose (postgres + app), `Dockerfile`; optional Cloudflare Tunnel |
 
-Deploy: run migrations (e.g. `npm run db:migrate:deploy` with project Prisma, not global Prisma 7); rebuild app with `--no-cache` if UI changes don’t show.
+Deploy: run migrations (e.g. `npm run db:migrate:deploy` with project Prisma); rebuild app with `--no-cache` if UI changes don’t show.
 
 ## Open / next
 
-- **Done:** Admin nav gated by role in DashboardLayout (only admins see “User management” / Logs).
 - Confirm next feature priorities (e.g. RBAC, more widgets, notifications).
 - Optional: formal design/PRD or deployment docs under `docs/`.
 
