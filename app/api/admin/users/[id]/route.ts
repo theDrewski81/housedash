@@ -27,13 +27,6 @@ export async function DELETE(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    await prisma.userPreferences.deleteMany({ where: { userId } }).catch(() => {});
-    await prisma.session.deleteMany({ where: { userId } });
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: "inactive" },
-    });
-
     await writeAuditLog({
       adminUserId: adminUser.id,
       action: "user_delete",
@@ -41,7 +34,9 @@ export async function DELETE(
       details: { email: target.email },
     });
 
-    return NextResponse.json({ ok: true });
+    await prisma.user.delete({ where: { id: userId } });
+
+    return NextResponse.json({ ok: true, email: target.email });
   } catch (e) {
     return handleAuthError(e);
   }

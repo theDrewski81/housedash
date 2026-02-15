@@ -25,6 +25,12 @@ const baseAdapter = PrismaAdapter(prisma);
 export const authOptions = {
   adapter: {
     ...baseAdapter,
+    async getUserByEmail(email: string) {
+      const user = await prisma.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+      });
+      return user;
+    },
     async createUser(data: Omit<AdapterUser, "id">) {
       const config = await getAppConfig();
       const userCount = await prisma.user.count();
@@ -59,6 +65,13 @@ export const authOptions = {
         const err = new Error(ACCOUNT_CREATION_DISABLED_ERROR) as Error & { code?: string };
         err.code = "ACCOUNT_CREATION_DISABLED";
         throw err;
+      }
+
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: data.email, mode: "insensitive" } },
+      });
+      if (existing) {
+        return existing as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
       }
 
       const user = await prisma.user.create({

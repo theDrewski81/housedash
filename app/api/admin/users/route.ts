@@ -159,6 +159,11 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = (await request.json()) as PatchBody;
     const rejectedEmails: { userId: string; email?: string }[] = [];
+    const results: {
+      approved: { email: string }[];
+      rejected: { email: string }[];
+      updated: { email: string; roleChanged?: boolean; newRole?: UserRole }[];
+    } = { approved: [], rejected: [], updated: [] };
 
     await prisma.$transaction(async (tx) => {
       if (body.allowAccountCreation !== undefined || body.auditUserCrud !== undefined) {
@@ -182,15 +187,28 @@ export async function PATCH(request: NextRequest) {
 
       if (body.users?.length) {
         for (const u of body.users) {
-          await tx.user.update({
+          const current = await tx.user.findUnique({
             where: { id: u.id },
-            data: {
-              ...(u.firstName !== undefined && { firstName: u.firstName }),
-              ...(u.lastName !== undefined && { lastName: u.lastName }),
-              ...(u.status !== undefined && { status: u.status }),
-              ...(u.role !== undefined && { role: u.role }),
-            },
+            select: { email: true, role: true },
           });
+          if (current) {
+            const roleChanged =
+              u.role !== undefined && current.role !== u.role;
+            await tx.user.update({
+              where: { id: u.id },
+              data: {
+                ...(u.firstName !== undefined && { firstName: u.firstName }),
+                ...(u.lastName !== undefined && { lastName: u.lastName }),
+                ...(u.status !== undefined && { status: u.status }),
+                ...(u.role !== undefined && { role: u.role }),
+              },
+            });
+            results.updated.push({
+              email: current.email,
+              roleChanged: roleChanged || undefined,
+              newRole: u.role,
+            });
+          }
         }
       }
 
@@ -205,8 +223,14 @@ export async function PATCH(request: NextRequest) {
               userId: item.userId,
               email: target?.email ?? undefined,
             });
+            if (target?.email) results.rejected.push({ email: target.email });
             await tx.user.delete({ where: { id: item.userId } });
           } else {
+            const target = await tx.user.findUnique({
+              where: { id: item.userId },
+              select: { email: true },
+            });
+            if (target?.email) results.approved.push({ email: target.email });
             await tx.user.update({
               where: { id: item.userId },
               data: {
@@ -265,7 +289,7 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, results });
   } catch (error) {
     console.error("Admin users PATCH error:", error);
     return NextResponse.json(

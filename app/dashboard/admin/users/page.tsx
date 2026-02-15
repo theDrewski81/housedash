@@ -298,10 +298,33 @@ export default function AdminUsersPage() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Save failed");
       }
-      setMessage({
-        type: "ok",
-        text: "Changes saved. They will take effect on next sign-in.",
-      });
+      const data = (await res.json()) as {
+        ok: boolean;
+        results?: {
+          approved: { email: string }[];
+          rejected: { email: string }[];
+          updated: { email: string; roleChanged?: boolean; newRole?: UserRole }[];
+        };
+      };
+      const parts: string[] = [];
+      for (const { email } of data.results?.approved ?? []) {
+        parts.push(`User ${email} has been added.`);
+      }
+      for (const { email } of data.results?.rejected ?? []) {
+        parts.push(`User ${email} has been deleted.`);
+      }
+      for (const u of data.results?.updated ?? []) {
+        if (u.roleChanged && u.newRole) {
+          const roleLabel =
+            ROLE_OPTIONS.find((o) => o.value === u.newRole)?.label ?? u.newRole;
+          parts.push(
+            `User ${u.email} role has changed to ${roleLabel}. This change will be visible on their next login.`
+          );
+        }
+      }
+      if (parts.length > 0) {
+        setMessage({ type: "ok", text: parts.join(" ") });
+      }
       await load();
     } catch (e) {
       setMessage({
@@ -314,12 +337,17 @@ export default function AdminUsersPage() {
   };
 
   const handleDelete = async (userId: string) => {
+    const emailToShow = confirm?.email;
     setConfirm(null);
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
+      const data = (await res.json()) as { ok?: boolean; email?: string };
       await load();
-      setMessage({ type: "ok", text: "User deactivated and settings removed." });
+      setMessage({
+        type: "ok",
+        text: `User ${data.email ?? emailToShow ?? "unknown"} has been deleted.`,
+      });
     } catch (e) {
       setMessage({
         type: "err",
@@ -396,7 +424,10 @@ export default function AdminUsersPage() {
         throw new Error(data.error ?? "Failed to create user");
       }
       setAddUserOpen(false);
-      setMessage({ type: "ok", text: "User added. They can sign in with Google using that email." });
+      setMessage({
+        type: "ok",
+        text: `User ${(data as { email?: string }).email ?? email} has been added.`,
+      });
       await load();
     } catch (e) {
       setAddUserError(e instanceof Error ? e.message : "Failed to create user");
