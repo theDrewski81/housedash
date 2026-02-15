@@ -92,8 +92,8 @@ export default function DashboardWidgets() {
           <ChevronRightIcon className="h-6 w-6" />
         </button>
 
-        {/* Expanded view: fills full content area below header (green zone); equal top/bottom padding from main; inner content scrolls */}
-        <div className="flex min-h-0 flex-1 flex-col py-4 md:py-0">
+        {/* Expanded view: fills full content area below header; horizontal padding so Prev/Next buttons do not overlap content */}
+        <div className="flex min-h-0 flex-1 flex-col py-4 md:py-0 md:px-14">
           <div className="min-h-0 flex-1 overflow-auto">
             <CurrentWidget
               isExpanded={true}
