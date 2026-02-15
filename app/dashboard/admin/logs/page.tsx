@@ -30,6 +30,22 @@ export default function AdminLogsPage() {
   const [data, setData] = useState<LogsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [auditUserCrud, setAuditUserCrud] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  const loadSettings = useCallback(async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (!res.ok) throw new Error("Failed to load settings");
+      const json = await res.json();
+      setAuditUserCrud(json.auditUserCrud ?? false);
+    } catch {
+      setAuditUserCrud(false);
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,8 +64,26 @@ export default function AdminLogsPage() {
   }, [page]);
 
   useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
     load();
   }, [load]);
+
+  const handleAuditToggle = async (checked: boolean) => {
+    setAuditUserCrud(checked);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auditUserCrud: checked }),
+      });
+      if (!res.ok) throw new Error("Failed to update setting");
+    } catch {
+      setAuditUserCrud(!checked);
+    }
+  };
 
   const formatAction = (action: string): string => {
     return action
@@ -62,6 +96,25 @@ export default function AdminLogsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Logs</h1>
+
+        <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+          <h2 className="text-lg font-semibold text-white mb-4">Log settings</h2>
+          {settingsLoading ? (
+            <div className="text-gray-400">Loading...</div>
+          ) : (
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={auditUserCrud}
+                onChange={(e) => handleAuditToggle(e.target.checked)}
+                className="rounded border-gray-600 bg-gray-700 text-blue-500"
+              />
+              <span className="text-gray-200">
+                Log user management actions
+              </span>
+            </label>
+          )}
+        </section>
 
         {loading && <div className="text-gray-400">Loading...</div>}
 
@@ -85,8 +138,8 @@ export default function AdminLogsPage() {
                           colSpan={4}
                           className="py-8 px-4 text-center text-gray-500"
                         >
-                          No log entries yet. Enable &quot;Log user management
-                          actions&quot; in User management to record actions.
+                          No log entries yet. Enable the option above to record
+                          actions.
                         </td>
                       </tr>
                     ) : (

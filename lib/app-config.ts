@@ -9,6 +9,7 @@ export type AuditAction =
   | "user_approve"
   | "user_reject"
   | "user_update"
+  | "user_created"
   | "user_delete"
   | "user_sign_out";
 

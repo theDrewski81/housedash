@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import {
   TrashIcon,
   ArrowRightOnRectangleIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import type { UserRole, UserStatus } from "@prisma/client";
 
@@ -79,9 +80,134 @@ function ConfirmModal({
   );
 }
 
+type AddUserForm = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  status: "active" | "inactive";
+};
+
+function AddUserModal({
+  form,
+  setForm,
+  error,
+  saving,
+  onSave,
+  onCancel,
+}: {
+  form: AddUserForm;
+  setForm: (f: AddUserForm | ((prev: AddUserForm) => AddUserForm)) => void;
+  error: string | null;
+  saving: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-gray-800 rounded-lg p-6 shadow-xl max-w-md w-full mx-4 border border-gray-700">
+        <h3 className="text-lg font-semibold text-white mb-4">Add New User</h3>
+        {error && (
+          <p className="text-red-400 text-sm mb-4" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Email</label>
+            <input
+              type="email"
+              required
+              value={form.email}
+              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">First name</label>
+            <input
+              type="text"
+              required
+              value={form.firstName}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, firstName: e.target.value }))
+              }
+              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Last name</label>
+            <input
+              type="text"
+              required
+              value={form.lastName}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, lastName: e.target.value }))
+              }
+              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Role</label>
+            <select
+              value={form.role}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, role: e.target.value as UserRole }))
+              }
+              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+            >
+              {ROLE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  status: e.target.value as "active" | "inactive",
+                }))
+              }
+              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+            >
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="px-4 py-2 text-gray-300 hover:text-white border border-gray-600 rounded hover:bg-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminUsersPage() {
   const [allowAccountCreation, setAllowAccountCreation] = useState(false);
-  const [auditUserCrud, setAuditUserCrud] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [approvalRows, setApprovalRows] = useState<ApprovalRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +218,16 @@ export default function AdminUsersPage() {
     userId: string;
     email: string;
   } | null>(null);
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [addUserForm, setAddUserForm] = useState<AddUserForm>({
+    email: "",
+    firstName: "",
+    lastName: "",
+    role: "user",
+    status: "active",
+  });
+  const [addUserError, setAddUserError] = useState<string | null>(null);
+  const [addUserSaving, setAddUserSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,7 +240,6 @@ export default function AdminUsersPage() {
       const settings = await settingsRes.json();
       const { users: userList } = await usersRes.json();
       setAllowAccountCreation(settings.allowAccountCreation ?? false);
-      setAuditUserCrud(settings.auditUserCrud ?? false);
       setUsers(userList ?? []);
       const pending = (userList ?? []).filter(
         (u: UserRow) => u.status === "pending_approval"
@@ -155,7 +290,6 @@ export default function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           allowAccountCreation,
-          auditUserCrud,
           users: userUpdates,
           approvalQueue,
         }),
@@ -223,6 +357,54 @@ export default function AdminUsersPage() {
     );
   };
 
+  const openAddUser = () => {
+    setAddUserForm({
+      email: "",
+      firstName: "",
+      lastName: "",
+      role: "user",
+      status: "active",
+    });
+    setAddUserError(null);
+    setAddUserOpen(true);
+  };
+
+  const handleAddUser = async () => {
+    const email = addUserForm.email.trim();
+    const firstName = addUserForm.firstName.trim();
+    const lastName = addUserForm.lastName.trim();
+    if (!email || !firstName || !lastName) {
+      setAddUserError("Email, first name, and last name are required.");
+      return;
+    }
+    setAddUserSaving(true);
+    setAddUserError(null);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          role: addUserForm.role,
+          status: addUserForm.status,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error ?? "Failed to create user");
+      }
+      setAddUserOpen(false);
+      setMessage({ type: "ok", text: "User added. They can sign in with Google using that email." });
+      await load();
+    } catch (e) {
+      setAddUserError(e instanceof Error ? e.message : "Failed to create user");
+    } finally {
+      setAddUserSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -264,24 +446,23 @@ export default function AdminUsersPage() {
                 Allow new account sign-ups (new accounts go to approval queue)
               </span>
             </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={auditUserCrud}
-                onChange={(e) => setAuditUserCrud(e.target.checked)}
-                className="rounded border-gray-600 bg-gray-700 text-blue-500"
-              />
-              <span className="text-gray-200">
-                Log user management actions
-              </span>
-            </label>
           </div>
         </section>
 
         <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-          <h2 className="text-lg font-semibold text-white mb-4">
-            Existing users
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-white">
+              Existing users
+            </h2>
+            <button
+              type="button"
+              onClick={openAddUser}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Add New User
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -489,6 +670,17 @@ export default function AdminUsersPage() {
               : handleSignOut(confirm.userId)
           }
           onCancel={() => setConfirm(null)}
+        />
+      )}
+
+      {addUserOpen && (
+        <AddUserModal
+          form={addUserForm}
+          setForm={setAddUserForm}
+          error={addUserError}
+          saving={addUserSaving}
+          onSave={handleAddUser}
+          onCancel={() => setAddUserOpen(false)}
         />
       )}
     </DashboardLayout>

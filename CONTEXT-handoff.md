@@ -25,7 +25,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 ## Current state
 
 - **Done:** Next.js 15 app with dashboard, five widgets (Weather, Schedule, Dinners, Groceries, Budget), NextAuth (Google + kiosk), Prisma + PostgreSQL, user preferences, kiosk auth, SSE, Docker Compose, health API. **User management:** first Google sign-in becomes admin and locks account creation; toggle to allow new sign-ups (→ approval queue); user list (edit name/status/role, delete, sign out); approval queue (approve/reject + role); audit log (Logs view) with “Log user management actions” toggle (default off). Migrations: `20250207000000_init`, `20250208000000_add_user_management_and_admin`. Next 15 async `params` used in all dynamic API routes. Security: npm audit 0 vulnerabilities (Next 15, glob override).
-- **Recently:** Admin nav (“User management”, “Logs”) visible to all logged-in users; admin routes protected by `requireAdmin()` (admin role or single user). After deploy, use `docker compose build --no-cache app` if admin links don’t appear.
+- **Recently:** Admin nav (“User management”, “Logs”) gated by `session.user.role === "admin"` in DashboardLayout so only admins see those links; admin routes protected by `requireAdmin()`. After deploy, use `docker compose build --no-cache app` if admin links don’t appear.
 
 ## Architecture / stack
 
@@ -41,7 +41,7 @@ Deploy: run migrations (e.g. `npm run db:migrate:deploy` with project Prisma, no
 
 ## Open / next
 
-- **Before calling user-management done:** Gate admin nav so only admins see “User management” / “Logs” (e.g. use `GET /api/admin/me` or `session.user.role`). See TODO in `components/layout/DashboardLayout.tsx`.
+- **Done:** Admin nav gated by role in DashboardLayout (only admins see “User management” / Logs).
 - Confirm next feature priorities (e.g. RBAC, more widgets, notifications).
 - Optional: formal design/PRD or deployment docs under `docs/`.
 

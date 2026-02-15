@@ -12,6 +12,17 @@ function handleAuthError(e: unknown): NextResponse {
   );
 }
 
+const USER_ROLES: UserRole[] = ["admin", "super_user", "user", "read_only"];
+const NEW_USER_STATUSES: ("active" | "inactive")[] = ["active", "inactive"];
+
+type PostBody = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  status: "active" | "inactive";
+};
+
 export async function GET() {
   try {
     await requireAdmin();
@@ -38,6 +49,80 @@ export async function GET() {
     console.error("Admin users GET error:", error);
     return NextResponse.json(
       { error: "Failed to load users" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let adminUser: Awaited<ReturnType<typeof requireAdmin>>;
+  try {
+    adminUser = await requireAdmin();
+  } catch (e) {
+    return handleAuthError(e);
+  }
+  try {
+    const body = (await request.json()) as PostBody;
+    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const firstName = typeof body.firstName === "string" ? body.firstName.trim() : "";
+    const lastName = typeof body.lastName === "string" ? body.lastName.trim() : "";
+    const role = body.role;
+    const status = body.status;
+
+    if (!email || !firstName || !lastName) {
+      return NextResponse.json(
+        { error: "Email, first name, and last name are required." },
+        { status: 400 }
+      );
+    }
+    if (!USER_ROLES.includes(role)) {
+      return NextResponse.json(
+        { error: "Invalid role." },
+        { status: 400 }
+      );
+    }
+    if (!NEW_USER_STATUSES.includes(status)) {
+      return NextResponse.json(
+        { error: "Status must be active or inactive." },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "A user with this email already exists." },
+        { status: 409 }
+      );
+    }
+
+    const name = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        firstName,
+        lastName,
+        name,
+        role,
+        status,
+      },
+    });
+
+    await writeAuditLog({
+      adminUserId: adminUser.id,
+      action: "user_created",
+      targetUserId: user.id,
+      details: { email: user.email, role, status },
+    });
+
+    return NextResponse.json({ id: user.id, email: user.email });
+  } catch (error) {
+    console.error("Admin users POST error:", error);
+    return NextResponse.json(
+      { error: "Failed to create user" },
       { status: 500 }
     );
   }

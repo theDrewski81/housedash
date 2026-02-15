@@ -40,29 +40,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               >
                 Home Dashboard
               </Link>
-              {/* TODO: before calling user-management done, gate admin nav on role (e.g. fetch /api/admin/me or session.user.role) so only admins see "User management" / "Logs" */}
-              <nav className="flex items-center gap-4" aria-label="Admin">
-                <Link
-                  href="/dashboard/admin/users"
-                  className={`text-sm font-medium ${
-                    pathname?.startsWith("/dashboard/admin/users")
-                      ? "text-white"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  User management
-                </Link>
-                <Link
-                  href="/dashboard/admin/logs"
-                  className={`text-sm font-medium ${
-                    pathname?.startsWith("/dashboard/admin/logs")
-                      ? "text-white"
-                      : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Logs
-                </Link>
-              </nav>
+              {session.user?.role === "admin" && (
+                <nav className="flex items-center gap-4" aria-label="Admin">
+                  <Link
+                    href="/dashboard/admin/users"
+                    className={`text-sm font-medium ${
+                      pathname?.startsWith("/dashboard/admin/users")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    User management
+                  </Link>
+                  <Link
+                    href="/dashboard/admin/logs"
+                    className={`text-sm font-medium ${
+                      pathname?.startsWith("/dashboard/admin/logs")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Logs
+                  </Link>
+                </nav>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {session.user?.image && (
