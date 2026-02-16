@@ -62,6 +62,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   >
                     Logs
                   </Link>
+                  <Link
+                    href="/dashboard/admin/settings"
+                    className={`text-sm font-medium ${
+                      pathname?.startsWith("/dashboard/admin/settings")
+                        ? "text-white"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Settings
+                  </Link>
                 </nav>
               )}
             </div>

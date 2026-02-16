@@ -53,6 +53,8 @@ model AppConfig {
   id                   String   @id @default(cuid())
   allowAccountCreation  Boolean  @default(false) @map("allow_account_creation")
   auditUserCrud        Boolean  @default(false) @map("audit_user_crud")
+  weatherLat           Float?   @map("weather_lat")
+  weatherLon           Float?   @map("weather_lon")
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

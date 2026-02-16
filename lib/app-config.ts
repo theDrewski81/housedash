@@ -17,6 +17,8 @@ export type AppConfigRow = {
   id: string;
   allowAccountCreation: boolean;
   auditUserCrud: boolean;
+  weatherLat: number | null;
+  weatherLon: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -24,21 +26,30 @@ export type AppConfigRow = {
 export async function getAppConfig(): Promise<{
   allowAccountCreation: boolean;
   auditUserCrud: boolean;
+  weatherLat: number | null;
+  weatherLon: number | null;
 }> {
   const row = await prisma.appConfig.findUnique({
     where: { id: APP_CONFIG_ID },
   });
   if (!row) {
-    return { allowAccountCreation: false, auditUserCrud: false };
+    return {
+      allowAccountCreation: false,
+      auditUserCrud: false,
+      weatherLat: null,
+      weatherLon: null,
+    };
   }
   return {
     allowAccountCreation: row.allowAccountCreation,
     auditUserCrud: row.auditUserCrud,
+    weatherLat: row.weatherLat ?? null,
+    weatherLon: row.weatherLon ?? null,
   };
 }
 
 export async function ensureAppConfig(): Promise<AppConfigRow> {
-  return prisma.appConfig.upsert({
+  const row = await prisma.appConfig.upsert({
     where: { id: APP_CONFIG_ID },
     create: {
       id: APP_CONFIG_ID,
@@ -47,6 +58,11 @@ export async function ensureAppConfig(): Promise<AppConfigRow> {
     },
     update: {},
   });
+  return {
+    ...row,
+    weatherLat: row.weatherLat ?? null,
+    weatherLon: row.weatherLon ?? null,
+  };
 }
 
 export async function setAllowAccountCreation(value: boolean): Promise<void> {

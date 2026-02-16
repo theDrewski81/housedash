@@ -44,6 +44,43 @@ export async function PATCH(request: NextRequest) {
     const allowAccountCreation =
       body.allowAccountCreation as boolean | undefined;
     const auditUserCrud = body.auditUserCrud as boolean | undefined;
+    const weatherLat = body.weatherLat as number | null | undefined;
+    const weatherLon = body.weatherLon as number | null | undefined;
+
+    if (weatherLat !== undefined || weatherLon !== undefined) {
+      const lat =
+        weatherLat !== undefined && weatherLat !== null
+          ? Number(weatherLat)
+          : null;
+      const lon =
+        weatherLon !== undefined && weatherLon !== null
+          ? Number(weatherLon)
+          : null;
+      if (lat !== null && (lat < -90 || lat > 90)) {
+        return NextResponse.json(
+          { error: "Latitude must be between -90 and 90" },
+          { status: 400 }
+        );
+      }
+      if (lon !== null && (lon < -180 || lon > 180)) {
+        return NextResponse.json(
+          { error: "Longitude must be between -180 and 180" },
+          { status: 400 }
+        );
+      }
+      if (lat !== null && lon === null) {
+        return NextResponse.json(
+          { error: "Provide both latitude and longitude, or clear both" },
+          { status: 400 }
+        );
+      }
+      if (lat === null && lon !== null) {
+        return NextResponse.json(
+          { error: "Provide both latitude and longitude, or clear both" },
+          { status: 400 }
+        );
+      }
+    }
 
     const updated = await prisma.appConfig.upsert({
       where: { id: APP_CONFIG_ID },
@@ -57,6 +94,8 @@ export async function PATCH(request: NextRequest) {
           allowAccountCreation,
         }),
         ...(auditUserCrud !== undefined && { auditUserCrud }),
+        ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
+        ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
       },
     });
 
@@ -78,6 +117,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       allowAccountCreation: updated.allowAccountCreation,
       auditUserCrud: updated.auditUserCrud,
+      weatherLat: updated.weatherLat ?? null,
+      weatherLon: updated.weatherLon ?? null,
     });
   } catch (error) {
     console.error("Admin settings PATCH error:", error);

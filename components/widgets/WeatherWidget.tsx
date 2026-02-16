@@ -36,22 +36,66 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
     }
   };
 
+  const nextSunriseSunset =
+    weather?.current != null &&
+    typeof weather.current.sunrise === "number" &&
+    typeof weather.current.sunset === "number"
+      ? (() => {
+          const now = Math.floor(Date.now() / 1000);
+          const tz = weather.current.timezone ?? 0;
+          const nowLocal = now + tz;
+          const sunriseLocal = weather.current.sunrise + tz;
+          const sunsetLocal = weather.current.sunset + tz;
+          const daySeconds = 86400;
+          let label: string;
+          let timeUnix: number;
+          if (nowLocal < sunriseLocal) {
+            label = "Sunrise";
+            timeUnix = weather.current.sunrise;
+          } else if (nowLocal < sunsetLocal) {
+            label = "Sunset";
+            timeUnix = weather.current.sunset;
+          } else {
+            label = "Sunrise";
+            timeUnix = weather.current.sunrise + daySeconds;
+          }
+          const timeStr = new Date((timeUnix + tz) * 1000).toLocaleTimeString(
+            "en-US",
+            { timeZone: "UTC", hour: "numeric", minute: "2-digit" }
+          );
+          return `${label} ${timeStr}`;
+        })()
+      : null;
+
+  const todayForecast = weather?.forecast?.[0];
   const currentContent = weather ? (
     <div className="space-y-2">
-      <div className="flex items-center gap-4">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
           <img
             src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`}
             alt={weather.current.description}
             className="w-16 h-16"
           />
-        </div>
-        <div>
-          <div className="text-3xl font-bold">{weather.current.temp}°F</div>
-          <div className="text-sm text-gray-400 capitalize">
-            {weather.current.description}
+          <div>
+            <div className="text-3xl font-bold">{weather.current.temp}°F</div>
+            <div className="text-sm text-gray-400 capitalize">
+              {weather.current.description}
+            </div>
           </div>
         </div>
+        {todayForecast != null && (
+          <div className="flex flex-col items-end text-right">
+            <div className="text-sm text-gray-400">High</div>
+            <div className="text-xl font-semibold">
+              {todayForecast.temp.max}°F
+            </div>
+            <div className="text-sm text-gray-400 mt-1">Low</div>
+            <div className="text-xl font-semibold">
+              {todayForecast.temp.min}°F
+            </div>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
@@ -67,8 +111,14 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
           {weather.current.windSpeed} mph
         </div>
         <div>
-          <span className="text-gray-400">Pressure:</span>{" "}
-          {weather.current.pressure} hPa
+          {nextSunriseSunset != null ? (
+            <span className="text-gray-400">{nextSunriseSunset}</span>
+          ) : (
+            <>
+              <span className="text-gray-400">Pressure:</span>{" "}
+              {weather.current.pressure} hPa
+            </>
+          )}
         </div>
       </div>
     </div>

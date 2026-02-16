@@ -8,6 +8,9 @@ export interface WeatherData {
     icon: string;
     windSpeed: number;
     visibility: number;
+    sunrise: number;
+    sunset: number;
+    timezone: number;
   };
   forecast: Array<{
     date: string;
@@ -53,7 +56,7 @@ export async function getWeatherData(
 
   const forecastData = await forecastResponse.json();
 
-  // Process current weather
+  // Process current weather (sys.sunrise/sunset are Unix seconds UTC; timezone is offset in seconds)
   const current = {
     temp: Math.round(currentData.main.temp),
     feelsLike: Math.round(currentData.main.feels_like),
@@ -63,6 +66,9 @@ export async function getWeatherData(
     icon: currentData.weather[0].icon,
     windSpeed: Math.round(currentData.wind.speed),
     visibility: currentData.visibility ? currentData.visibility / 1000 : 0,
+    sunrise: currentData.sys?.sunrise ?? 0,
+    sunset: currentData.sys?.sunset ?? 0,
+    timezone: currentData.timezone ?? 0,
   };
 
   // Process forecast - group by day and get daily min/max

@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
 import { getWeatherData } from "@/lib/api/weather";
+import { getAppConfig } from "@/lib/app-config";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const lat = searchParams.get("lat")
+    let lat = searchParams.get("lat")
       ? parseFloat(searchParams.get("lat")!)
       : undefined;
-    const lon = searchParams.get("lon")
+    let lon = searchParams.get("lon")
       ? parseFloat(searchParams.get("lon")!)
       : undefined;
+
+    if (lat === undefined || lon === undefined) {
+      const config = await getAppConfig();
+      if (
+        config.weatherLat != null &&
+        config.weatherLon != null
+      ) {
+        lat = config.weatherLat;
+        lon = config.weatherLon;
+      }
+    }
 
     const weather = await getWeatherData(lat, lon);
     return NextResponse.json(weather);
