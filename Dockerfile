@@ -57,6 +57,7 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
@@ -68,4 +69,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Run pending migrations before starting the server so the DB schema is up to date
+ENTRYPOINT ["sh", "-c", "npx prisma migrate deploy && exec node server.js"]
