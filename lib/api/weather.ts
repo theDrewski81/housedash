@@ -103,7 +103,7 @@ export async function getWeatherData(
   });
 
   const forecast = Object.values(dailyForecast)
-    .slice(0, 7)
+    .slice(0, 8)
     .map((day: any) => ({
       date: day.date,
       temp: {
@@ -127,7 +127,7 @@ export async function getWeatherData(
     (item: { dt: number }) => item.dt >= now
   );
   const hourlySource = futureList.length > 0 ? futureList : forecastData.list;
-  const hourly = hourlySource.slice(0, 4).map((item: any) => ({
+  const hourly = hourlySource.slice(0, 8).map((item: any) => ({
     dt: item.dt,
     temp: Math.round(item.main.temp),
     icon: item.weather[0].icon,
