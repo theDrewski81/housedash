@@ -132,11 +132,28 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error("Admin settings PATCH error:", error);
+    const message =
+      error instanceof Error ? error.message : String(error);
+    const isSchemaError =
+      message.includes("weather_lat") ||
+      message.includes("weather_lon") ||
+      message.includes("weather_location_name") ||
+      message.includes("does not exist") ||
+      message.includes("column");
+    if (isSchemaError) {
+      return NextResponse.json(
+        {
+          error:
+            "Database schema is out of date. Run migrations to save weather location (see README Docker section).",
+          details: message,
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       {
         error: "Failed to update settings",
-        details:
-          error instanceof Error ? error.message : String(error),
+        details: message,
       },
       { status: 500 }
     );

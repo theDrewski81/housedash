@@ -24,6 +24,26 @@ export type AppConfigRow = {
   updatedAt: Date;
 };
 
+const DEFAULT_APP_CONFIG = {
+  allowAccountCreation: false,
+  auditUserCrud: false,
+  weatherLat: null as number | null,
+  weatherLon: null as number | null,
+  weatherLocationName: null as string | null,
+};
+
+function isSchemaError(error: unknown): boolean {
+  const msg =
+    error instanceof Error ? error.message : String(error);
+  return (
+    msg.includes("weather_lat") ||
+    msg.includes("weather_lon") ||
+    msg.includes("weather_location_name") ||
+    msg.includes("does not exist") ||
+    msg.includes("column")
+  );
+}
+
 export async function getAppConfig(): Promise<{
   allowAccountCreation: boolean;
   auditUserCrud: boolean;
@@ -31,25 +51,27 @@ export async function getAppConfig(): Promise<{
   weatherLon: number | null;
   weatherLocationName: string | null;
 }> {
-  const row = await prisma.appConfig.findUnique({
-    where: { id: APP_CONFIG_ID },
-  });
-  if (!row) {
+  try {
+    const row = await prisma.appConfig.findUnique({
+      where: { id: APP_CONFIG_ID },
+    });
+    if (!row) {
+      return { ...DEFAULT_APP_CONFIG };
+    }
     return {
-      allowAccountCreation: false,
-      auditUserCrud: false,
-      weatherLat: null,
-      weatherLon: null,
-      weatherLocationName: null,
+      allowAccountCreation: row.allowAccountCreation,
+      auditUserCrud: row.auditUserCrud,
+      weatherLat: row.weatherLat ?? null,
+      weatherLon: row.weatherLon ?? null,
+      weatherLocationName: row.weatherLocationName ?? null,
     };
+  } catch (error) {
+    if (isSchemaError(error)) {
+      console.error("getAppConfig: schema error (migrations may be missing):", error);
+      return { ...DEFAULT_APP_CONFIG };
+    }
+    throw error;
   }
-  return {
-    allowAccountCreation: row.allowAccountCreation,
-    auditUserCrud: row.auditUserCrud,
-    weatherLat: row.weatherLat ?? null,
-    weatherLon: row.weatherLon ?? null,
-    weatherLocationName: row.weatherLocationName ?? null,
-  };
 }
 
 export async function ensureAppConfig(): Promise<AppConfigRow> {

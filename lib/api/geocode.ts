@@ -40,7 +40,10 @@ export async function geocodeLocation(
     };
   }
 
-  const directUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmed)}&limit=1&appid=${apiKey}`;
+  const commaCount = (trimmed.match(/,/g) ?? []).length;
+  const directQuery =
+    commaCount <= 1 ? `${trimmed},US` : trimmed;
+  const directUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(directQuery)}&limit=1&appid=${apiKey}`;
   const directRes = await fetch(directUrl);
   if (!directRes.ok) return null;
   const list = (await directRes.json()) as Array<{
