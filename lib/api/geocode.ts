@@ -58,9 +58,9 @@ export async function geocodeLocation(
   ) {
     return null;
   }
-  const name = [first.name, first.state, first.country]
-    .filter(Boolean)
-    .join(", ") || first.name ?? trimmed;
+  const name =
+    ([first.name, first.state, first.country].filter(Boolean).join(", ") ||
+      first.name) ?? trimmed;
   return {
     lat: first.lat,
     lon: first.lon,
