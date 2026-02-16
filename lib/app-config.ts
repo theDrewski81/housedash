@@ -19,6 +19,7 @@ export type AppConfigRow = {
   auditUserCrud: boolean;
   weatherLat: number | null;
   weatherLon: number | null;
+  weatherLocationName: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -28,6 +29,7 @@ export async function getAppConfig(): Promise<{
   auditUserCrud: boolean;
   weatherLat: number | null;
   weatherLon: number | null;
+  weatherLocationName: string | null;
 }> {
   const row = await prisma.appConfig.findUnique({
     where: { id: APP_CONFIG_ID },
@@ -38,6 +40,7 @@ export async function getAppConfig(): Promise<{
       auditUserCrud: false,
       weatherLat: null,
       weatherLon: null,
+      weatherLocationName: null,
     };
   }
   return {
@@ -45,6 +48,7 @@ export async function getAppConfig(): Promise<{
     auditUserCrud: row.auditUserCrud,
     weatherLat: row.weatherLat ?? null,
     weatherLon: row.weatherLon ?? null,
+    weatherLocationName: row.weatherLocationName ?? null,
   };
 }
 
@@ -62,6 +66,7 @@ export async function ensureAppConfig(): Promise<AppConfigRow> {
     ...row,
     weatherLat: row.weatherLat ?? null,
     weatherLon: row.weatherLon ?? null,
+    weatherLocationName: row.weatherLocationName ?? null,
   };
 }
 

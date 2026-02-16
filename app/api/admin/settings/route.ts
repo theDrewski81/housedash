@@ -3,8 +3,10 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import { getAppConfig } from "@/lib/app-config";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/app-config";
+import { geocodeLocation } from "@/lib/api/geocode";
 
 const APP_CONFIG_ID = "default";
+const WEATHER_LOCATION_MAX_LENGTH = 200;
 
 export async function GET() {
   try {
@@ -44,41 +46,40 @@ export async function PATCH(request: NextRequest) {
     const allowAccountCreation =
       body.allowAccountCreation as boolean | undefined;
     const auditUserCrud = body.auditUserCrud as boolean | undefined;
-    const weatherLat = body.weatherLat as number | null | undefined;
-    const weatherLon = body.weatherLon as number | null | undefined;
+    const weatherLocation =
+      body.weatherLocation !== undefined
+        ? (body.weatherLocation as string).trim()
+        : undefined;
 
-    if (weatherLat !== undefined || weatherLon !== undefined) {
-      const lat =
-        weatherLat !== undefined && weatherLat !== null
-          ? Number(weatherLat)
-          : null;
-      const lon =
-        weatherLon !== undefined && weatherLon !== null
-          ? Number(weatherLon)
-          : null;
-      if (lat !== null && (lat < -90 || lat > 90)) {
+    let weatherLocationName: string | null | undefined;
+    let weatherLat: number | null | undefined;
+    let weatherLon: number | null | undefined;
+
+    if (weatherLocation !== undefined) {
+      if (weatherLocation.length > WEATHER_LOCATION_MAX_LENGTH) {
         return NextResponse.json(
-          { error: "Latitude must be between -90 and 90" },
+          { error: "Location string is too long" },
           { status: 400 }
         );
       }
-      if (lon !== null && (lon < -180 || lon > 180)) {
-        return NextResponse.json(
-          { error: "Longitude must be between -180 and 180" },
-          { status: 400 }
-        );
-      }
-      if (lat !== null && lon === null) {
-        return NextResponse.json(
-          { error: "Provide both latitude and longitude, or clear both" },
-          { status: 400 }
-        );
-      }
-      if (lat === null && lon !== null) {
-        return NextResponse.json(
-          { error: "Provide both latitude and longitude, or clear both" },
-          { status: 400 }
-        );
+      if (weatherLocation === "") {
+        weatherLocationName = null;
+        weatherLat = null;
+        weatherLon = null;
+      } else {
+        const geocoded = await geocodeLocation(weatherLocation);
+        if (!geocoded) {
+          return NextResponse.json(
+            {
+              error:
+                "Location not found. Try 'City, State' or a ZIP code.",
+            },
+            { status: 400 }
+          );
+        }
+        weatherLocationName = geocoded.name;
+        weatherLat = geocoded.lat;
+        weatherLon = geocoded.lon;
       }
     }
 
@@ -88,12 +89,20 @@ export async function PATCH(request: NextRequest) {
         id: APP_CONFIG_ID,
         allowAccountCreation: allowAccountCreation ?? false,
         auditUserCrud: auditUserCrud ?? false,
+        ...(weatherLocationName !== undefined && {
+          weatherLocationName: weatherLocationName ?? null,
+        }),
+        ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
+        ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
       },
       update: {
         ...(allowAccountCreation !== undefined && {
           allowAccountCreation,
         }),
         ...(auditUserCrud !== undefined && { auditUserCrud }),
+        ...(weatherLocationName !== undefined && {
+          weatherLocationName,
+        }),
         ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
         ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
       },
@@ -119,11 +128,16 @@ export async function PATCH(request: NextRequest) {
       auditUserCrud: updated.auditUserCrud,
       weatherLat: updated.weatherLat ?? null,
       weatherLon: updated.weatherLon ?? null,
+      weatherLocationName: updated.weatherLocationName ?? null,
     });
   } catch (error) {
     console.error("Admin settings PATCH error:", error);
     return NextResponse.json(
-      { error: "Failed to update settings" },
+      {
+        error: "Failed to update settings",
+        details:
+          error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

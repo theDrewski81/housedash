@@ -8,6 +8,7 @@ type SettingsResponse = {
   auditUserCrud?: boolean;
   weatherLat?: number | null;
   weatherLon?: number | null;
+  weatherLocationName?: string | null;
 };
 
 export default function AdminSettingsPage() {
@@ -15,8 +16,7 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [weatherLat, setWeatherLat] = useState<string>("");
-  const [weatherLon, setWeatherLon] = useState<string>("");
+  const [weatherLocation, setWeatherLocation] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,11 +25,10 @@ export default function AdminSettingsPage() {
       const res = await fetch("/api/admin/settings");
       if (!res.ok) throw new Error("Failed to load settings");
       const data: SettingsResponse = await res.json();
-      setWeatherLat(
-        data.weatherLat != null ? String(data.weatherLat) : ""
-      );
-      setWeatherLon(
-        data.weatherLon != null ? String(data.weatherLon) : ""
+      setWeatherLocation(
+        data.weatherLocationName != null && data.weatherLocationName !== ""
+          ? data.weatherLocationName
+          : ""
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings");
@@ -48,23 +47,24 @@ export default function AdminSettingsPage() {
     setError(null);
     setSuccess(false);
     try {
-      const lat =
-        weatherLat.trim() === "" ? null : parseFloat(weatherLat.trim());
-      const lon =
-        weatherLon.trim() === "" ? null : parseFloat(weatherLon.trim());
+      const value = weatherLocation.trim() || null;
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          weatherLat: lat,
-          weatherLon: lon,
-        }),
+        body: JSON.stringify({ weatherLocation: value }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error ?? "Failed to update settings");
+        throw new Error(
+          data.details ?? data.error ?? "Failed to update settings"
+        );
       }
       setSuccess(true);
+      setWeatherLocation(
+        data.weatherLocationName != null && data.weatherLocationName !== ""
+          ? data.weatherLocationName
+          : ""
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -85,8 +85,8 @@ export default function AdminSettingsPage() {
               Weather location
             </h2>
             <p className="text-gray-400 text-sm mb-4">
-              Latitude and longitude used for the weather widget. Leave both
-              empty to use the default (New York City).
+              Enter city and state (e.g. Seattle, WA) or ZIP code (e.g. 98101).
+              Leave empty for default (New York City).
             </p>
             <form onSubmit={handleSave} className="space-y-4 max-w-md">
               {error && (
@@ -99,45 +99,21 @@ export default function AdminSettingsPage() {
                   Settings saved.
                 </p>
               )}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label
-                    htmlFor="weather-lat"
-                    className="block text-sm text-gray-300 mb-1"
-                  >
-                    Latitude
-                  </label>
-                  <input
-                    id="weather-lat"
-                    type="number"
-                    step="any"
-                    min={-90}
-                    max={90}
-                    value={weatherLat}
-                    onChange={(e) => setWeatherLat(e.target.value)}
-                    className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-500"
-                    placeholder="e.g. 40.7128"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label
-                    htmlFor="weather-lon"
-                    className="block text-sm text-gray-300 mb-1"
-                  >
-                    Longitude
-                  </label>
-                  <input
-                    id="weather-lon"
-                    type="number"
-                    step="any"
-                    min={-180}
-                    max={180}
-                    value={weatherLon}
-                    onChange={(e) => setWeatherLon(e.target.value)}
-                    className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-500"
-                    placeholder="e.g. -74.0060"
-                  />
-                </div>
+              <div>
+                <label
+                  htmlFor="weather-location"
+                  className="block text-sm text-gray-300 mb-1"
+                >
+                  Location
+                </label>
+                <input
+                  id="weather-location"
+                  type="text"
+                  value={weatherLocation}
+                  onChange={(e) => setWeatherLocation(e.target.value)}
+                  className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-500"
+                  placeholder="e.g. Seattle, WA or 98101"
+                />
               </div>
               <button
                 type="submit"
