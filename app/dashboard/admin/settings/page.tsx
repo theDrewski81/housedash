@@ -11,25 +11,38 @@ type SettingsResponse = {
   weatherLocationName?: string | null;
 };
 
+type SchemaStatusResponse = { weatherLocationSupported?: boolean };
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [weatherLocation, setWeatherLocation] = useState<string>("");
+  const [weatherLocationSupported, setWeatherLocationSupported] =
+    useState<boolean>(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/admin/settings");
-      if (!res.ok) throw new Error("Failed to load settings");
-      const data: SettingsResponse = await res.json();
+      const [settingsRes, schemaRes] = await Promise.all([
+        fetch("/api/admin/settings"),
+        fetch("/api/admin/settings/schema-status"),
+      ]);
+      if (!settingsRes.ok) throw new Error("Failed to load settings");
+      const data: SettingsResponse = await settingsRes.json();
       setWeatherLocation(
         data.weatherLocationName != null && data.weatherLocationName !== ""
           ? data.weatherLocationName
           : ""
       );
+      if (schemaRes.ok) {
+        const schemaData: SchemaStatusResponse = await schemaRes.json();
+        setWeatherLocationSupported(
+          schemaData.weatherLocationSupported !== false
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings");
     } finally {
@@ -56,7 +69,7 @@ export default function AdminSettingsPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(
-          data.details ?? data.error ?? "Failed to update settings"
+          data.error ?? data.details ?? "Failed to update settings"
         );
       }
       setSuccess(true);
@@ -84,6 +97,12 @@ export default function AdminSettingsPage() {
             <h2 className="text-lg font-semibold text-white mb-4">
               Weather location
             </h2>
+            {!weatherLocationSupported && (
+              <div className="mb-4 rounded border border-amber-600/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
+                Migrations required to save weather location. See README Docker
+                section to run migrations.
+              </div>
+            )}
             <p className="text-gray-400 text-sm mb-4">
               Enter city and state (e.g. Seattle, WA) or ZIP code (e.g. 98101).
               Leave empty for default (New York City).
