@@ -68,18 +68,37 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
       : null;
 
   const todayForecast = weather?.forecast?.[0];
+  const hourlySlice = weather?.hourly?.slice(0, 3) ?? []; // next 6–9h
+
   const currentContent = weather ? (
     <div className="space-y-2">
+      {/* Current weather — larger when expanded */}
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div
+          className={
+            isExpanded
+              ? "flex items-center gap-5"
+              : "flex items-center gap-4"
+          }
+        >
           <img
             src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`}
             alt={weather.current.description}
-            className="w-16 h-16"
+            className={isExpanded ? "w-20 h-20" : "w-16 h-16"}
           />
           <div>
-            <div className="text-3xl font-bold">{weather.current.temp}°F</div>
-            <div className="text-sm text-gray-400 capitalize">
+            <div
+              className={
+                isExpanded ? "text-4xl font-bold" : "text-3xl font-bold"
+              }
+            >
+              {weather.current.temp}°F
+            </div>
+            <div
+              className={
+                isExpanded ? "text-base text-gray-400 capitalize" : "text-sm text-gray-400 capitalize"
+              }
+            >
               {weather.current.description}
             </div>
           </div>
@@ -87,28 +106,36 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
         {todayForecast != null && (
           <div className="flex flex-col items-end text-right">
             <div className="text-sm text-gray-400">High</div>
-            <div className="text-xl font-semibold">
+            <div className={isExpanded ? "text-2xl font-semibold" : "text-xl font-semibold"}>
               {todayForecast.temp.max}°F
             </div>
             <div className="text-sm text-gray-400 mt-1">Low</div>
-            <div className="text-xl font-semibold">
+            <div className={isExpanded ? "text-2xl font-semibold" : "text-xl font-semibold"}>
               {todayForecast.temp.min}°F
             </div>
           </div>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
+
+      {/* Minor details: single row when expanded, 2x2 when collapsed */}
+      <div
+        className={
+          isExpanded
+            ? "flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+            : "grid grid-cols-2 gap-2 text-sm"
+        }
+      >
         <div>
           <span className="text-gray-400">Feels like:</span>{" "}
           {weather.current.feelsLike}°F
         </div>
         <div>
-          <span className="text-gray-400">Humidity:</span>{" "}
-          {weather.current.humidity}%
-        </div>
-        <div>
           <span className="text-gray-400">Wind:</span>{" "}
           {weather.current.windSpeed} mph
+        </div>
+        <div>
+          <span className="text-gray-400">Humidity:</span>{" "}
+          {weather.current.humidity}%
         </div>
         <div>
           {nextSunriseSunset != null ? (
@@ -121,6 +148,34 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
           )}
         </div>
       </div>
+
+      {/* Next 6–9 hours at ~80% of current block height (expanded only) */}
+      {isExpanded && hourlySlice.length > 0 && (
+        <div
+          className="flex items-stretch justify-between gap-2 rounded-lg bg-gray-700/60 py-2 px-3"
+          style={{ minHeight: "4.5rem" }}
+        >
+          {hourlySlice.map((h) => (
+            <div
+              key={h.dt}
+              className="flex flex-col items-center justify-center flex-1 min-w-0"
+            >
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {new Date(h.dt * 1000).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  hour12: true,
+                })}
+              </span>
+              <img
+                src={`https://openweathermap.org/img/wn/${h.icon}.png`}
+                alt={h.description}
+                className="w-8 h-8 flex-shrink-0"
+              />
+              <span className="text-sm font-medium">{h.temp}°</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   ) : loading ? (
     <div className="text-gray-400">Loading weather...</div>
@@ -129,31 +184,27 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
   );
 
   const forecastContent = weather ? (
-    <div className="space-y-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
       {weather.forecast.map((day, index) => (
         <div
           key={day.date}
-          className="flex items-center justify-between p-2 bg-gray-700 rounded"
+          className="flex flex-col items-center gap-1 p-2 bg-gray-700/80 rounded-lg min-w-0"
         >
-          <div className="flex items-center gap-3">
-            <div className="text-sm font-medium">
-              {index === 0
-                ? "Today"
-                : new Date(day.date).toLocaleDateString("en-US", {
-                    weekday: "short",
-                  })}
-            </div>
-            <img
-              src={`https://openweathermap.org/img/wn/${day.icon}.png`}
-              alt={day.description}
-              className="w-10 h-10"
-            />
-            <div className="text-sm capitalize text-gray-300">
-              {day.description}
-            </div>
+          <div className="text-xs font-medium text-gray-300 truncate w-full text-center">
+            {index === 0
+              ? "Today"
+              : new Date(day.date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                })}
           </div>
-          <div className="text-sm font-semibold">
-            {day.temp.min}° / {day.temp.max}°F
+          <img
+            src={`https://openweathermap.org/img/wn/${day.icon}.png`}
+            alt={day.description}
+            className="w-8 h-8 flex-shrink-0"
+            title={day.description}
+          />
+          <div className="text-sm font-semibold whitespace-nowrap">
+            {day.temp.min}° / {day.temp.max}°
           </div>
         </div>
       ))}

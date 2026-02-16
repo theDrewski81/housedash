@@ -12,6 +12,13 @@ export interface WeatherData {
     sunset: number;
     timezone: number;
   };
+  /** Next 3-hour slots (typically 4 items = 12h) for hourly strip. */
+  hourly: Array<{
+    dt: number;
+    temp: number;
+    icon: string;
+    description: string;
+  }>;
   forecast: Array<{
     date: string;
     temp: {
@@ -115,5 +122,17 @@ export async function getWeatherData(
       ),
     }));
 
-  return { current, forecast };
+  const now = Math.floor(Date.now() / 1000);
+  const futureList = forecastData.list.filter(
+    (item: { dt: number }) => item.dt >= now
+  );
+  const hourlySource = futureList.length > 0 ? futureList : forecastData.list;
+  const hourly = hourlySource.slice(0, 4).map((item: any) => ({
+    dt: item.dt,
+    temp: Math.round(item.main.temp),
+    icon: item.weather[0].icon,
+    description: item.weather[0].description,
+  }));
+
+  return { current, hourly, forecast };
 }
