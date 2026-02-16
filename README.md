@@ -39,10 +39,11 @@ Household dashboard: weather, schedule, dinners, groceries, and budget. Sign in 
 
 ## Docker
 
-**First-time or after schema changes:** run migrations, then start the app:
+**First-time or after schema changes:** start Postgres, run migrations, then start the app (migrations must run before the app so the DB has the latest columns):
 
 ```bash
-docker compose build migrate
+docker compose build --no-cache
+docker compose up -d postgres
 docker compose --profile tools run --rm migrate
 docker compose up -d
 ```
