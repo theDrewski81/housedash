@@ -110,7 +110,7 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
             {hourlySlice.map((h) => (
               <div
                 key={h.dt}
-                className="flex flex-col items-center justify-center flex-1 min-w-0"
+                className="flex flex-col items-center justify-center flex-shrink-0"
               >
                 <span className="text-xs text-gray-400 whitespace-nowrap">
                   {new Date(h.dt * 1000).toLocaleTimeString("en-US", {
@@ -181,7 +181,8 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
   );
 
   const forecastContent = weather ? (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 justify-center">
+    <div className="flex justify-center w-full">
+      <div className="inline-grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
       {weather.forecast.map((day, index) => (
         <div
           key={day.date}
@@ -205,6 +206,7 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
           </div>
         </div>
       ))}
+      </div>
     </div>
   ) : null;
 
