@@ -72,21 +72,27 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
 
   const currentContent = weather ? (
     <div className="space-y-2">
-      {/* Current weather — when expanded: row1 = current + high/low; row2 = hourly (full width, left edge = content) */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Expanded: 3-column grid [current | hourly | high/low]. Collapsed: flex row. */}
+      <div
+        className={
+          isExpanded
+            ? "grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] items-center gap-4"
+            : "flex items-center justify-between gap-4"
+        }
+      >
         <div
           className={
             isExpanded
-              ? "flex items-center gap-5 flex-shrink-0"
+              ? "flex items-center gap-5 min-w-0"
               : "flex items-center gap-4"
           }
         >
           <img
             src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`}
             alt={weather.current.description}
-            className={isExpanded ? "w-20 h-20" : "w-16 h-16"}
+            className={isExpanded ? "w-20 h-20 flex-shrink-0" : "w-16 h-16"}
           />
-          <div>
+          <div className="min-w-0">
             <div
               className={
                 isExpanded ? "text-4xl font-bold" : "text-3xl font-bold"
@@ -103,8 +109,33 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
             </div>
           </div>
         </div>
+        {isExpanded && hourlySlice.length > 0 && (
+          <div className="min-w-0 w-max max-w-full justify-self-end">
+            <div className="flex items-stretch gap-3 rounded-lg bg-gray-700/60 py-3 px-3 min-h-[5rem]">
+              {hourlySlice.map((h) => (
+                <div
+                  key={h.dt}
+                  className="flex flex-col items-center justify-center min-w-[3.5rem]"
+                >
+                  <span className="text-sm text-gray-400 whitespace-nowrap">
+                    {new Date(h.dt * 1000).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      hour12: true,
+                    })}
+                  </span>
+                  <img
+                    src={`https://openweathermap.org/img/wn/${h.icon}@2x.png`}
+                    alt={h.description}
+                    className="w-10 h-10 flex-shrink-0"
+                  />
+                  <span className="text-sm font-medium">{h.temp}°</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {todayForecast != null && (
-          <div className="flex flex-col items-end text-right flex-shrink-0">
+          <div className="flex flex-col items-end text-right min-w-0">
             <div className="text-sm text-gray-400">High</div>
             <div className={isExpanded ? "text-2xl font-semibold" : "text-xl font-semibold"}>
               {todayForecast.temp.max}°F
@@ -116,32 +147,6 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
           </div>
         )}
       </div>
-
-      {isExpanded && hourlySlice.length > 0 && (
-        <div className="flex justify-end rounded-lg bg-gray-700/60 py-3 px-3 min-h-[5rem] w-full">
-          <div className="flex items-stretch gap-3">
-            {hourlySlice.map((h) => (
-              <div
-                key={h.dt}
-                className="flex flex-col items-center justify-center flex-shrink-0 min-w-[3.5rem]"
-              >
-                <span className="text-sm text-gray-400 whitespace-nowrap">
-                  {new Date(h.dt * 1000).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    hour12: true,
-                  })}
-                </span>
-                <img
-                  src={`https://openweathermap.org/img/wn/${h.icon}@2x.png`}
-                  alt={h.description}
-                  className="w-10 h-10 flex-shrink-0"
-                />
-                <span className="text-sm font-medium">{h.temp}°</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Minor details: single row when expanded (more spacing), 2x2 when collapsed */}
       <div
@@ -184,7 +189,7 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
   const forecastContent = weather ? (
     <div className="flex justify-center w-full">
       <div
-        className="grid gap-3 w-2/3"
+        className="grid gap-3 w-2/3 mx-auto"
         style={{
           gridTemplateColumns: `repeat(${weather.forecast.length}, minmax(0, 1fr))`,
         }}
