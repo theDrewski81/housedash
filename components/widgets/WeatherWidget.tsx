@@ -105,7 +105,7 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
         </div>
         {isExpanded && hourlySlice.length > 0 && (
           <div
-            className="flex items-stretch justify-end gap-1 rounded-lg bg-gray-700/60 py-2 px-2 min-h-[4.5rem] flex-1 min-w-0 mx-1"
+            className="flex items-stretch gap-1 rounded-lg bg-gray-700/60 py-2 px-2 min-h-[4.5rem] flex-shrink-0 ml-auto mr-1"
           >
             {hourlySlice.map((h) => (
               <div
@@ -182,7 +182,12 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
 
   const forecastContent = weather ? (
     <div className="flex justify-center w-full">
-      <div className="inline-grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div
+        className="inline-grid gap-2"
+        style={{
+          gridTemplateColumns: `repeat(${weather.forecast.length}, minmax(0, max-content))`,
+        }}
+      >
       {weather.forecast.map((day, index) => (
         <div
           key={day.date}
