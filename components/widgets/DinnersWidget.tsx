@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Widget from "@/components/ui/Widget";
 import {
   DndContext,
@@ -174,11 +174,17 @@ function SlotRow({
 interface DinnersWidgetProps {
   isExpanded?: boolean;
   onExpandToggle?: () => void;
+  expandToView?: "rotation" | null;
+  clearExpandToView?: () => void;
+  onExpandToRotation?: () => void;
 }
 
 export default function DinnersWidget({
   isExpanded,
   onExpandToggle,
+  expandToView,
+  clearExpandToView,
+  onExpandToRotation,
 }: DinnersWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -313,7 +319,7 @@ export default function DinnersWidget({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners-rotation"] });
-      queryClient.refetchQueries({ queryKey: ["dinners-rotation"] });
+      setEditingId(null);
       setView("rotation");
     },
   });
@@ -431,18 +437,37 @@ export default function DinnersWidget({
     });
   };
 
-  const handleAddToRotationFromEdit = () => {
-    addToRotationMutation.mutate({
-      mealName: editForm.mealName.trim(),
-      description: editForm.description.trim() || undefined,
-    });
+  const handleAddToRotationFromEdit = async () => {
+    if (!editForm.mealName.trim()) return;
+    try {
+      await addToRotationMutation.mutateAsync({
+        mealName: editForm.mealName.trim(),
+        description: editForm.description.trim() || undefined,
+      });
+      await queryClient.refetchQueries({ queryKey: ["dinners-rotation"] });
+      setEditingId(null);
+      setView("rotation");
+    } catch {
+      // Mutation already surfaces error
+    }
   };
 
   const tonightDinner = slots[0] ?? null;
 
-  const openRotationView = () => {
-    setView("rotation");
-    onExpandToggle?.();
+  useEffect(() => {
+    if (isExpanded && expandToView === "rotation") {
+      setView("rotation");
+      clearExpandToView?.();
+    }
+  }, [isExpanded, expandToView, clearExpandToView]);
+
+  const openRotationFromCollapsed = () => {
+    if (onExpandToRotation) {
+      onExpandToRotation();
+    } else {
+      setView("rotation");
+      onExpandToggle?.();
+    }
   };
 
   const currentContent = (
@@ -461,7 +486,7 @@ export default function DinnersWidget({
       )}
       <button
         type="button"
-        onClick={openRotationView}
+        onClick={openRotationFromCollapsed}
         className="text-sm text-blue-400 hover:text-blue-300"
       >
         View Rotation

@@ -20,8 +20,11 @@ const WIDGETS = [
 
 const SWIPE_THRESHOLD_PX = 50;
 
+const DINNERS_WIDGET_INDEX = 3;
+
 export default function DashboardWidgets() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandToView, setExpandToView] = useState<"rotation" | null>(null);
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +103,12 @@ export default function DashboardWidgets() {
             <CurrentWidget
               isExpanded={true}
               onExpandToggle={() => setExpandedIndex(null)}
+              expandToView={expandedIndex === DINNERS_WIDGET_INDEX ? expandToView : undefined}
+              clearExpandToView={
+                expandedIndex === DINNERS_WIDGET_INDEX
+                  ? () => setExpandToView(null)
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -117,6 +126,14 @@ export default function DashboardWidgets() {
           key={i}
           isExpanded={false}
           onExpandToggle={() => setExpandedIndex(i)}
+          onExpandToRotation={
+            WidgetComponent === DinnersWidget
+              ? () => {
+                  setExpandToView("rotation");
+                  setExpandedIndex(DINNERS_WIDGET_INDEX);
+                }
+              : undefined
+          }
         />
       ))}
     </div>
