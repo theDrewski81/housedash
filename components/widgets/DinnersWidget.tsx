@@ -1,26 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Widget from "@/components/ui/Widget";
 import {
   DndContext,
-  closestCenter,
-  KeyboardSensor,
+  DragEndEvent,
+  DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  useDraggable,
+  useDroppable,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { format, startOfWeek, addDays, isToday, parseISO } from "date-fns";
+import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { isToday } from "date-fns";
 
 interface Dinner {
   id: string;
@@ -32,52 +26,44 @@ interface Dinner {
   linkedDinnerId: string | null;
 }
 
-function SortableDinnerItem({
+const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
+
+function DayDateSquare({ date }: { date: Date }) {
+  return (
+    <div className="flex h-full min-h-[3.5rem] w-16 shrink-0 flex-col items-center justify-center rounded bg-gray-700/80 text-center">
+      <span className="text-xs font-medium uppercase text-gray-300">
+        {format(date, "EEE")}
+      </span>
+      <span className="text-sm text-white">{format(date, "M/d")}</span>
+    </div>
+  );
+}
+
+function DinnerCard({
   dinner,
   onToggleComplete,
   onDelete,
+  isOverlay,
 }: {
   dinner: Dinner;
   onToggleComplete: (id: string) => void;
   onDelete: (id: string) => void;
+  isOverlay?: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: dinner.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
+  const inner = (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={`bg-gray-700 rounded p-3 mb-2 flex items-center gap-3 ${
+      className={`flex items-center gap-3 rounded bg-gray-700 p-3 ${
         dinner.isComplete ? "opacity-60" : ""
-      }`}
+      } ${isOverlay ? "shadow-lg ring-2 ring-blue-500" : ""}`}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-white"
-      >
-        ⋮⋮
-      </div>
       <input
         type="checkbox"
         checked={dinner.isComplete}
         onChange={() => onToggleComplete(dinner.id)}
-        className="w-4 h-4"
+        className="h-4 w-4 shrink-0"
+        onClick={(e) => e.stopPropagation()}
       />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <div
           className={`font-medium ${dinner.isComplete ? "line-through" : ""}`}
         >
@@ -86,16 +72,93 @@ function SortableDinnerItem({
         {dinner.description && (
           <div className="text-sm text-gray-400">{dinner.description}</div>
         )}
-        <div className="text-xs text-gray-500 mt-1">
-          {format(parseISO(dinner.date), "EEE, MMM d")}
-        </div>
       </div>
       <button
-        onClick={() => onDelete(dinner.id)}
-        className="text-red-400 hover:text-red-300 text-sm"
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(dinner.id);
+        }}
+        className="shrink-0 text-sm text-red-400 hover:text-red-300"
       >
         Delete
       </button>
+    </div>
+  );
+
+  if (isOverlay) return inner;
+
+  return (
+    <DraggableDinner id={dinner.id}>
+      {inner}
+    </DraggableDinner>
+  );
+}
+
+function DraggableDinner({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`touch-none ${isDragging ? "opacity-50" : ""}`}
+      {...listeners}
+      {...attributes}
+    >
+      <div className="cursor-grab active:cursor-grabbing">{children}</div>
+    </div>
+  );
+}
+
+function SlotRow({
+  slotId,
+  date,
+  dinner,
+  onToggleComplete,
+  onDelete,
+}: {
+  slotId: string;
+  date: Date;
+  dinner: Dinner | null;
+  onToggleComplete: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const { isOver, setNodeRef } = useDroppable({ id: slotId });
+
+  return (
+    <div className="flex items-stretch gap-3">
+      <DayDateSquare date={date} />
+      <div
+        ref={setNodeRef}
+        className={`min-h-[3.5rem] flex-1 rounded border-2 border-dashed transition-colors ${
+          isOver ? "border-blue-500 bg-gray-700/50" : "border-gray-600 bg-gray-700/30"
+        }`}
+      >
+        {dinner ? (
+          <div className="p-2">
+            <DinnerCard
+              dinner={dinner}
+              onToggleComplete={onToggleComplete}
+              onDelete={onDelete}
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-[3.5rem] items-center px-3 text-gray-500 text-sm">
+            Empty
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -105,61 +168,90 @@ interface DinnersWidgetProps {
   onExpandToggle?: () => void;
 }
 
-export default function DinnersWidget({ isExpanded, onExpandToggle }: DinnersWidgetProps = {}) {
+export default function DinnersWidget({
+  isExpanded,
+  onExpandToggle,
+}: DinnersWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newMeal, setNewMeal] = useState({
-    mealName: "",
-    description: "",
-    date: format(new Date(), "yyyy-MM-dd"),
-  });
+  const [newMeal, setNewMeal] = useState({ mealName: "", description: "" });
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
     })
   );
 
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const dates = useMemo(
+    () => [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, i)),
+    [today]
+  );
+
   const { data: dinners = [], isLoading } = useQuery<Dinner[]>({
-    queryKey: ["dinners"],
+    queryKey: ["dinners", format(today, "yyyy-MM-dd")],
     queryFn: async () => {
-      const startDate = format(startOfWeek(new Date()), "yyyy-MM-dd");
-      const endDate = format(addDays(startOfWeek(new Date()), 6), "yyyy-MM-dd");
-      const response = await fetch(
+      const startDate = format(today, "yyyy-MM-dd");
+      const endDate = format(addDays(today, 6), "yyyy-MM-dd");
+      const res = await fetch(
         `/api/widgets/dinners?startDate=${startDate}&endDate=${endDate}`
       );
-      if (!response.ok) throw new Error("Failed to fetch dinners");
-      return response.json();
+      if (!res.ok) throw new Error("Failed to fetch dinners");
+      return res.json();
     },
   });
 
+  const slots = useMemo(() => {
+    const result: (Dinner | null)[] = dates.map(() => null);
+    const sorted = [...dinners].sort(
+      (a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime() ||
+        a.orderIndex - b.orderIndex
+    );
+    for (const d of sorted) {
+      const dDate = parseISO(d.date);
+      let idx = dates.findIndex((dt) => isSameDay(dt, dDate));
+      if (idx < 0 || result[idx] !== null) {
+        idx = result.findIndex((s) => s === null);
+      }
+      if (idx >= 0) result[idx] = d;
+    }
+    return result;
+  }, [dinners, dates]);
+
   const createMutation = useMutation({
-    mutationFn: async (dinner: Partial<Dinner>) => {
-      const response = await fetch("/api/widgets/dinners", {
+    mutationFn: async (body: { mealName: string; description?: string; date: string }) => {
+      const res = await fetch("/api/widgets/dinners", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dinner),
+        body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error("Failed to create dinner");
-      return response.json();
+      if (!res.ok) throw new Error("Failed to create dinner");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners"] });
       setShowAddForm(false);
-      setNewMeal({ mealName: "", description: "", date: format(new Date(), "yyyy-MM-dd") });
+      setNewMeal({ mealName: "", description: "" });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Dinner> }) => {
-      const response = await fetch(`/api/widgets/dinners/${id}`, {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<Dinner>;
+    }) => {
+      const res = await fetch(`/api/widgets/dinners/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Failed to update dinner");
-      return response.json();
+      if (!res.ok) throw new Error("Failed to update dinner");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners"] });
@@ -168,43 +260,82 @@ export default function DinnersWidget({ isExpanded, onExpandToggle }: DinnersWid
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/widgets/dinners/${id}`, {
+      const res = await fetch(`/api/widgets/dinners/${id}`, {
         method: "DELETE",
       });
-      if (!response.ok) throw new Error("Failed to delete dinner");
-      return response.json();
+      if (!res.ok) throw new Error("Failed to delete dinner");
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners"] });
     },
   });
 
+  const getNextAvailableDate = (): string => {
+    const firstEmpty = slots.findIndex((s) => s === null);
+    const idx = firstEmpty >= 0 ? firstEmpty : dates.length - 1;
+    return format(dates[idx], "yyyy-MM-dd");
+  };
+
+  const handleAddMeal = () => {
+    if (!newMeal.mealName.trim()) return;
+    const date = getNextAvailableDate();
+    createMutation.mutate({
+      mealName: newMeal.mealName.trim(),
+      description: newMeal.description.trim() || undefined,
+      date,
+    });
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    setActiveId(null);
+    if (!over || typeof active.id !== "string") return;
 
-    const oldIndex = dinners.findIndex((d) => d.id === active.id);
-    const newIndex = dinners.findIndex((d) => d.id === over.id);
+    const fromSlot = slots.findIndex((s) => s?.id === active.id);
+    if (fromSlot < 0) return;
 
-    const newDinners = arrayMove(dinners, oldIndex, newIndex);
-    newDinners.forEach((dinner, index) => {
-      if (dinner.orderIndex !== index) {
-        updateMutation.mutate({
-          id: dinner.id,
-          data: { orderIndex: index },
-        });
+    let toSlot: number;
+    if (typeof over.id === "string" && over.id.startsWith("slot-")) {
+      toSlot = parseInt(over.id.replace("slot-", ""), 10);
+      if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
+    } else {
+      toSlot = slots.findIndex((s) => s?.id === over.id);
+      if (toSlot < 0) return;
+    }
+
+    if (fromSlot === toSlot) return;
+
+    const movedDinner = slots[fromSlot]!;
+    const updates: { id: string; date: string }[] = [];
+
+    if (toSlot < fromSlot) {
+      updates.push({ id: movedDinner.id, date: format(dates[toSlot], "yyyy-MM-dd") });
+      for (let j = toSlot; j < fromSlot; j++) {
+        const d = slots[j];
+        if (d) updates.push({ id: d.id, date: format(dates[j + 1], "yyyy-MM-dd") });
       }
+    } else {
+      updates.push({ id: movedDinner.id, date: format(dates[toSlot], "yyyy-MM-dd") });
+      for (let j = fromSlot + 1; j <= toSlot; j++) {
+        const d = slots[j];
+        if (d) updates.push({ id: d.id, date: format(dates[j - 1], "yyyy-MM-dd") });
+      }
+    }
+
+    updates.forEach(({ id, date }) => {
+      updateMutation.mutate({ id, data: { date } });
     });
   };
 
   const tonightDinner = dinners.find((d) => {
-    const dinnerDate = parseISO(d.date);
-    return isToday(dinnerDate) && !d.isComplete;
+    const dDate = parseISO(d.date);
+    return isToday(dDate) && !d.isComplete;
   });
 
   const currentContent = tonightDinner ? (
     <div className="space-y-2">
-      <div className="font-semibold text-lg">{tonightDinner.mealName}</div>
+      <div className="text-lg font-semibold">{tonightDinner.mealName}</div>
       {tonightDinner.description && (
         <div className="text-sm text-gray-400">{tonightDinner.description}</div>
       )}
@@ -215,46 +346,38 @@ export default function DinnersWidget({ isExpanded, onExpandToggle }: DinnersWid
 
   const weeklyContent = (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <h3 className="font-semibold">Weekly Plan</h3>
         <button
+          type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded"
+          className="rounded bg-blue-600 px-3 py-1 text-sm hover:bg-blue-700"
         >
           {showAddForm ? "Cancel" : "Add Meal"}
         </button>
       </div>
 
       {showAddForm && (
-        <div className="bg-gray-700 rounded p-3 space-y-2">
+        <div className="space-y-2 rounded bg-gray-700 p-3">
           <input
             type="text"
             placeholder="Meal name"
             value={newMeal.mealName}
-            onChange={(e) =>
-              setNewMeal({ ...newMeal, mealName: e.target.value })
-            }
-            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
+            onChange={(e) => setNewMeal((m) => ({ ...m, mealName: e.target.value }))}
+            className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
           />
           <input
             type="text"
             placeholder="Description (optional)"
             value={newMeal.description}
-            onChange={(e) =>
-              setNewMeal({ ...newMeal, description: e.target.value })
-            }
-            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
-          />
-          <input
-            type="date"
-            value={newMeal.date}
-            onChange={(e) => setNewMeal({ ...newMeal, date: e.target.value })}
-            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
+            onChange={(e) => setNewMeal((m) => ({ ...m, description: e.target.value }))}
+            className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
           />
           <button
-            onClick={() => createMutation.mutate(newMeal)}
-            disabled={!newMeal.mealName || createMutation.isPending}
-            className="w-full bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-sm disabled:opacity-50"
+            type="button"
+            onClick={handleAddMeal}
+            disabled={!newMeal.mealName.trim() || createMutation.isPending}
+            className="w-full rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-50"
           >
             Add
           </button>
@@ -263,34 +386,48 @@ export default function DinnersWidget({ isExpanded, onExpandToggle }: DinnersWid
 
       {isLoading ? (
         <div className="text-gray-400">Loading...</div>
-      ) : dinners.length === 0 ? (
-        <div className="text-gray-400 text-sm">No meals planned this week</div>
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          onDragStart={(e) => setActiveId(e.active.id as string)}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext
-            items={dinners.map((d) => d.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            {dinners.map((dinner) => (
-              <SortableDinnerItem
-                key={dinner.id}
-                dinner={dinner}
-                onToggleComplete={(id) =>
-                  updateMutation.mutate({
-                    id,
-                    data: {
-                      isComplete: !dinners.find((d) => d.id === id)?.isComplete,
-                    },
-                  })
-                }
+          <div className="space-y-3">
+            {dates.map((date, i) => (
+              <SlotRow
+                key={SLOT_IDS[i]}
+                slotId={SLOT_IDS[i]}
+                date={date}
+                dinner={slots[i] ?? null}
+                onToggleComplete={(id) => {
+                  const d = dinners.find((x) => x.id === id);
+                  if (d)
+                    updateMutation.mutate({
+                      id,
+                      data: { isComplete: !d.isComplete },
+                    });
+                }}
                 onDelete={(id) => deleteMutation.mutate(id)}
               />
             ))}
-          </SortableContext>
+          </div>
+
+          <DragOverlay>
+            {activeId ? (() => {
+              const dinner = dinners.find((d) => d.id === activeId);
+              if (!dinner) return null;
+              return (
+                <div className="w-[min(100%,20rem)]">
+                  <DinnerCard
+                    dinner={dinner}
+                    onToggleComplete={() => {}}
+                    onDelete={() => {}}
+                    isOverlay
+                  />
+                </div>
+              );
+            })() : null}
+          </DragOverlay>
         </DndContext>
       )}
     </div>

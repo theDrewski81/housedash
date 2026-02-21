@@ -7,6 +7,7 @@ import ScheduleWidget from "@/components/widgets/ScheduleWidget";
 import DinnersWidget from "@/components/widgets/DinnersWidget";
 import GroceriesWidget from "@/components/widgets/GroceriesWidget";
 import BudgetWidget from "@/components/widgets/BudgetWidget";
+import ProjectsWidget from "@/components/widgets/ProjectsWidget";
 
 const WIDGETS = [
   { component: WeatherWidget },
@@ -14,6 +15,7 @@ const WIDGETS = [
   { component: DinnersWidget },
   { component: GroceriesWidget },
   { component: BudgetWidget },
+  { component: ProjectsWidget },
 ] as const;
 
 const SWIPE_THRESHOLD_PX = 50;
