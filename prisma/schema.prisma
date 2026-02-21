@@ -39,12 +39,13 @@ model User {
 
   accounts       Account[]
   sessions       Session[]
-  dinners        Dinner[]
-  groceries      Grocery[]
-  budgetIncomes  BudgetIncome[]
-  budgetExpenses BudgetExpense[]
-  preferences    UserPreferences?
-  auditLogsDone  AdminAuditLog[] @relation("AdminAuditLogAdmin")
+  dinners         Dinner[]
+  dinnerRotations DinnerRotation[]
+  groceries       Grocery[]
+  budgetIncomes   BudgetIncome[]
+  budgetExpenses  BudgetExpense[]
+  preferences     UserPreferences?
+  auditLogsDone   AdminAuditLog[] @relation("AdminAuditLogAdmin")
 
   @@map("users")
 }
@@ -147,6 +148,18 @@ model Dinner {
 
   @@index([userId, date])
   @@map("dinners")
+}
+
+model DinnerRotation {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealName    String   @map("meal_name")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("dinner_rotations")
 }
 
 model Grocery {
