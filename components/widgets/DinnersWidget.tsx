@@ -11,6 +11,7 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
+  rectIntersection,
 } from "@dnd-kit/core";
 import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -312,6 +313,8 @@ export default function DinnersWidget({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners-rotation"] });
+      queryClient.refetchQueries({ queryKey: ["dinners-rotation"] });
+      setView("rotation");
     },
   });
 
@@ -355,7 +358,7 @@ export default function DinnersWidget({
     });
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     if (!over || typeof active.id !== "string") return;
@@ -399,9 +402,10 @@ export default function DinnersWidget({
       }
     }
 
-    updates.forEach(({ id, date }) => {
-      updateMutation.mutate({ id, data: { date } });
-    });
+    for (const { id, date } of updates) {
+      await updateMutation.mutateAsync({ id, data: { date } });
+    }
+    queryClient.invalidateQueries({ queryKey: ["dinners"] });
   };
 
   const handleDoubleClick = (id: string) => {
@@ -436,15 +440,33 @@ export default function DinnersWidget({
 
   const tonightDinner = slots[0] ?? null;
 
-  const currentContent = tonightDinner ? (
-    <div className="space-y-1">
-      <div className="text-lg font-semibold">{tonightDinner.mealName}</div>
-      {tonightDinner.description && (
-        <div className="text-sm text-gray-400">{tonightDinner.description}</div>
+  const openRotationView = () => {
+    setView("rotation");
+    onExpandToggle?.();
+  };
+
+  const currentContent = (
+    <div className="space-y-2">
+      {tonightDinner ? (
+        <>
+          <div className="text-lg font-semibold">{tonightDinner.mealName}</div>
+          {tonightDinner.description && (
+            <div className="text-sm text-gray-400">
+              {tonightDinner.description}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-gray-400">No dinner planned for tonight</div>
       )}
+      <button
+        type="button"
+        onClick={openRotationView}
+        className="text-sm text-blue-400 hover:text-blue-300"
+      >
+        View Rotation
+      </button>
     </div>
-  ) : (
-    <div className="text-gray-400">No dinner planned for tonight</div>
   );
 
   const editViewContent = editingId && (
@@ -601,6 +623,7 @@ export default function DinnersWidget({
       ) : (
         <DndContext
           sensors={sensors}
+          collisionDetection={rectIntersection}
           onDragStart={(e) => setActiveId(e.active.id as string)}
           onDragEnd={handleDragEnd}
         >
