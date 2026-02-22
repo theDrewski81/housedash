@@ -459,15 +459,6 @@ export default function DinnersWidget({
     }
   }, [isExpanded, expandToView, clearExpandToView]);
 
-  const openRotationFromCollapsed = () => {
-    if (onExpandToRotation) {
-      onExpandToRotation();
-    } else {
-      setView("rotation");
-      onExpandToggle?.();
-    }
-  };
-
   const currentContent = (
     <div className="space-y-2">
       {tonightDinner ? (
@@ -482,13 +473,6 @@ export default function DinnersWidget({
       ) : (
         <div className="text-gray-400">No dinner planned for tonight</div>
       )}
-      <button
-        type="button"
-        onClick={openRotationFromCollapsed}
-        className="text-sm text-blue-400 hover:text-blue-300"
-      >
-        View Rotation
-      </button>
     </div>
   );
 
@@ -558,32 +542,34 @@ export default function DinnersWidget({
           Back to weekly plan
         </button>
       </div>
-      <ul className="space-y-2">
+      <ul className="grid grid-cols-3 gap-2">
         {rotationItems.map((item) => (
           <li
             key={item.id}
-            className="flex items-center gap-2 rounded bg-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-600"
+            className="flex flex-col gap-1 rounded bg-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-600 min-w-0"
             onClick={() => setAddToDinnerDialogItem(item)}
           >
-            <span className="font-medium flex-1 min-w-0 truncate">
-              {item.mealName}
-            </span>
+            <div className="flex items-start justify-between gap-1 min-w-0">
+              <span className="font-medium min-w-0 truncate">
+                {item.mealName}
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRemoveFromRotationId(item.id);
+                }}
+                className="shrink-0 text-gray-400 hover:text-red-400 p-0.5"
+                aria-label="Remove from rotation"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </div>
             {item.description && (
-              <span className="text-sm text-gray-400 truncate shrink-0">
+              <span className="text-sm text-gray-400 truncate">
                 {item.description}
               </span>
             )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setRemoveFromRotationId(item.id);
-              }}
-              className="shrink-0 text-gray-400 hover:text-red-400 p-1"
-              aria-label="Remove from rotation"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
           </li>
         ))}
       </ul>

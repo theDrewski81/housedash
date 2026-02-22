@@ -7,6 +7,16 @@ function isMissingTableError(error: unknown): boolean {
   return /relation "dinner_rotations" does not exist|Table.*dinner_rotations.*doesn't exist/i.test(msg);
 }
 
+function dedupeRotationByMealName<T extends { mealName: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = item.mealName.trim().toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function GET() {
   try {
     const user = await requireAuth();
@@ -14,7 +24,8 @@ export async function GET() {
       where: { userId: user.id },
       orderBy: { createdAt: "asc" },
     });
-    return NextResponse.json(items);
+    const deduped = dedupeRotationByMealName(items);
+    return NextResponse.json(deduped);
   } catch (error) {
     console.error("Dinner rotation API error:", error);
     if (isMissingTableError(error)) {
