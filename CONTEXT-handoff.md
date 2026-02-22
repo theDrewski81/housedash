@@ -25,6 +25,8 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 | `app/api/admin/` | Admin APIs: settings (GET/PATCH), settings/schema-status (GET, weatherLocationSupported), users, logs, me (isAdmin). |
 | `app/api/widgets/weather/route.ts` | Weather API: uses getAppConfig() for lat/lon when no query params; widget uses this. |
 | `docker-compose.yml` | Postgres + app; migrate via `--profile tools run --rm migrate` (run after postgres, before app). |
+| `.cursor/commands/deploy.md` | Copy-ready deploy script: sudo, one command per line (git pull, build migrate + app, postgres, migrate, up). |
+| `scripts/deploy-with-migrate.sh` | Server script: pull, build migrate, run migrate, build app, up -d app (run with sudo from repo root). |
 
 ## Current state
 
@@ -32,6 +34,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 - **User management:** First Google sign-in becomes admin; toggle to allow new sign-ups (approval queue, one per email). Add New User, user list (edit/delete/sign out), approval queue. "Log user management actions" on Logs page. Admin nav and routes gated by `requireAdmin()`.
 - **Weather location:** Admin → Settings has a single "Location" input (city, state or zip). On save, geocode (OpenWeather Geocoding API) runs; result is stored in AppConfig (weatherLat, weatherLon, weatherLocationName). Weather widget uses that location via GET /api/widgets/weather. If migrations adding weather columns have not been run: Settings page shows banner "Migrations required to save weather location…"; GET settings still loads (getAppConfig returns defaults on schema error); PATCH returns 503 with friendly message. Schema-status endpoint GET /api/admin/settings/schema-status returns weatherLocationSupported so the banner can show. Migrations: `20250215000000_add_weather_location_to_app_config` (weather_lat, weather_lon), `20250216000000_add_weather_location_name_to_app_config`.
 - **Collapsed weather widget:** Current temp + conditions on left; today’s high/low on right; next sunrise/sunset instead of pressure (data from OpenWeather current weather).
+- **Dinners widget:** Collapsed view shows only tonight’s dinner (no "View Rotation" link). Rotation list: deduplicated by meal name (case-insensitive, ignore description) in GET `/api/widgets/dinners/rotation`; Rotation view is a 3-column grid (`components/widgets/DinnersWidget.tsx`, `app/api/widgets/dinners/rotation/route.ts`).
 - **Handoff:** Deployment section in this file was recently clarified (rebuild migrate image when new migrations exist; run migrations before app).
 
 ## Architecture / stack
