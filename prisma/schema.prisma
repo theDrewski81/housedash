@@ -134,6 +134,8 @@ model Dinner {
   date        DateTime
   mealName    String   @map("meal_name")
   description String?
+  url         String?  // Optional link to online recipe; edit-only, not shown in plan/rotation/collapsed
+  ingredients String?  // Optional; for future grocery list aggregation; edit-only
   isComplete  Boolean  @default(false) @map("is_complete")
   orderIndex  Int      @default(0) @map("order_index")
   userId      String   @map("user_id")

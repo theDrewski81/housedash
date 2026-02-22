@@ -19,6 +19,10 @@ export async function PATCH(
       data: {
         ...(body.mealName && { mealName: body.mealName }),
         ...(body.description !== undefined && { description: body.description }),
+        ...(body.url !== undefined && { url: body.url || null }),
+        ...(body.ingredients !== undefined && {
+          ingredients: body.ingredients || null,
+        }),
         ...(body.isComplete !== undefined && { isComplete: body.isComplete }),
         ...(body.orderIndex !== undefined && { orderIndex: body.orderIndex }),
         ...(body.date && { date: new Date(body.date) }),

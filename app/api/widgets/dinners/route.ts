@@ -43,6 +43,8 @@ export async function POST(request: NextRequest) {
         date: new Date(body.date),
         mealName: body.mealName,
         description: body.description || null,
+        url: body.url || null,
+        ingredients: body.ingredients || null,
         orderIndex: body.orderIndex || 0,
         linkedDinnerId: body.linkedDinnerId || null,
       },

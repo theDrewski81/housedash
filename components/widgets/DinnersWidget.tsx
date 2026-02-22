@@ -22,6 +22,8 @@ interface Dinner {
   date: string;
   mealName: string;
   description: string | null;
+  url: string | null;
+  ingredients: string | null;
   isComplete: boolean;
   orderIndex: number;
   linkedDinnerId: string | null;
@@ -192,7 +194,12 @@ export default function DinnersWidget({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [view, setView] = useState<"weekly" | "edit" | "rotation">("weekly");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ mealName: "", description: "" });
+  const [editForm, setEditForm] = useState({
+    mealName: "",
+    description: "",
+    url: "",
+    ingredients: "",
+  });
   const [addToDinnerDialogItem, setAddToDinnerDialogItem] =
     useState<RotationItem | null>(null);
   const [removeFromRotationId, setRemoveFromRotationId] = useState<string | null>(null);
@@ -419,6 +426,8 @@ export default function DinnersWidget({
       setEditForm({
         mealName: d.mealName,
         description: d.description ?? "",
+        url: d.url ?? "",
+        ingredients: d.ingredients ?? "",
       });
       setView("edit");
     }
@@ -431,6 +440,8 @@ export default function DinnersWidget({
       data: {
         mealName: editForm.mealName.trim(),
         description: editForm.description.trim() || null,
+        url: editForm.url.trim() || null,
+        ingredients: editForm.ingredients.trim() || null,
       },
     });
   };
@@ -497,6 +508,22 @@ export default function DinnersWidget({
             setEditForm((f) => ({ ...f, description: e.target.value }))
           }
           className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
+        />
+        <input
+          type="url"
+          placeholder="Recipe URL (optional)"
+          value={editForm.url}
+          onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
+          className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
+        />
+        <textarea
+          placeholder="Ingredients (optional — for grocery list later)"
+          value={editForm.ingredients}
+          onChange={(e) =>
+            setEditForm((f) => ({ ...f, ingredients: e.target.value }))
+          }
+          rows={3}
+          className="w-full rounded bg-gray-600 px-3 py-2 text-sm resize-y min-h-[4rem]"
         />
         <div className="flex flex-wrap gap-2">
           <button
