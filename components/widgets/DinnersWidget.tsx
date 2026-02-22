@@ -50,7 +50,7 @@ const ROW_HEIGHT = "min-h-[3.5rem]";
 function DayDateSquare({ date }: { date: Date }) {
   return (
     <div
-      className={`flex w-16 shrink-0 flex-col items-center justify-center rounded bg-gray-700/80 text-center ${ROW_HEIGHT}`}
+      className="flex w-16 shrink-0 h-[3.5rem] flex-col items-center justify-center rounded bg-gray-700/80 text-center"
     >
       <span className="text-xs font-medium uppercase text-gray-300">
         {format(date, "EEE")}
@@ -156,7 +156,7 @@ function SlotRow({
       <DayDateSquare date={date} />
       <div
         ref={setNodeRef}
-        className={`flex-1 rounded transition-colors ${ROW_HEIGHT} ${
+        className={`flex-1 rounded transition-colors overflow-hidden shrink-0 h-[3.5rem] ${
           hasDinner
             ? ""
             : isOver
@@ -165,7 +165,7 @@ function SlotRow({
         }`}
       >
         {dinner ? (
-          <div className="h-full p-1">
+          <div className="h-full min-h-0 p-1 overflow-hidden">
             <DinnerCard
               dinner={dinner}
               onDelete={onDelete}
@@ -173,7 +173,7 @@ function SlotRow({
             />
           </div>
         ) : (
-          <div className={`flex items-center px-3 text-gray-500 text-sm ${ROW_HEIGHT}`}>
+          <div className="flex items-center px-3 text-gray-500 text-sm h-full">
             Empty
           </div>
         )}
@@ -422,6 +422,35 @@ export default function DinnersWidget({
         date: format(dates[fromSlot], "yyyy-MM-dd"),
       });
     }
+
+    // #region agent log
+    fetch(
+      "http://127.0.0.1:7796/ingest/a40eb657-02c8-43a9-aa68-0dd8089b4fd0",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "4119a3",
+        },
+        body: JSON.stringify({
+          sessionId: "4119a3",
+          runId: "post-fix",
+          hypothesisId: "droppable-overlap",
+          location: "DinnersWidget.tsx:handleDragEnd",
+          message: "Drag end: over.id, toSlot, dateToSlot",
+          data: {
+            overId: over.id,
+            fromSlot,
+            toSlot,
+            dateToSlot: format(dates[toSlot], "yyyy-MM-dd"),
+            dateFromSlot: format(dates[fromSlot], "yyyy-MM-dd"),
+            updates: updates.map((u) => ({ ...u })),
+          },
+          timestamp: Date.now(),
+        }),
+      }
+    ).catch(() => {});
+    // #endregion
 
     for (const { id, date } of updates) {
       await updateMutation.mutateAsync({ id, data: { date } });
