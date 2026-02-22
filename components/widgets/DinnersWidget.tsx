@@ -227,7 +227,22 @@ export default function DinnersWidget({
     queryFn: async () => {
       const res = await fetch("/api/widgets/dinners/rotation");
       if (!res.ok) throw new Error("Failed to fetch rotation");
-      return res.json();
+      const list = await res.json();
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:rotationQueryFn",
+          message: "Rotation GET result",
+          data: { count: Array.isArray(list) ? list.length : "not-array" },
+          timestamp: Date.now(),
+          hypothesisId: "C,D",
+        }),
+      }).catch(() => {});
+      // #endregion
+      return list;
     },
   });
 
@@ -309,13 +324,56 @@ export default function DinnersWidget({
 
   const addToRotationMutation = useMutation({
     mutationFn: async (body: { mealName: string; description?: string }) => {
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:mutationFn:beforeFetch",
+          message: "POST rotation about to run",
+          data: { mealName: body.mealName?.slice(0, 30) },
+          timestamp: Date.now(),
+          hypothesisId: "A",
+        }),
+      }).catch(() => {});
+      // #endregion
       const res = await fetch("/api/widgets/dinners/rotation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:mutationFn:afterFetch",
+          message: "POST rotation response",
+          data: { ok: res.ok, status: res.status },
+          timestamp: Date.now(),
+          hypothesisId: "A,F",
+        }),
+      }).catch(() => {});
+      // #endregion
       if (!res.ok) throw new Error("Failed to add to rotation");
-      return res.json();
+      const data = await res.json();
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:mutationFn:afterJson",
+          message: "POST rotation parsed body",
+          data: { id: (data as { id?: string })?.id },
+          timestamp: Date.now(),
+          hypothesisId: "B,F",
+        }),
+      }).catch(() => {});
+      // #endregion
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners-rotation"] });
@@ -438,16 +496,72 @@ export default function DinnersWidget({
   };
 
   const handleAddToRotationFromEdit = async () => {
+    // #region agent log
+    fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+      body: JSON.stringify({
+        sessionId: "05439c",
+        location: "DinnersWidget.tsx:handleAddToRotationFromEdit:entry",
+        message: "Add to Rotation handler called",
+        data: { mealName: editForm.mealName?.slice(0, 50), hasDescription: !!editForm.description },
+        timestamp: Date.now(),
+        hypothesisId: "E",
+      }),
+    }).catch(() => {});
+    // #endregion
     if (!editForm.mealName.trim()) return;
     try {
-      await addToRotationMutation.mutateAsync({
+      const result = await addToRotationMutation.mutateAsync({
         mealName: editForm.mealName.trim(),
         description: editForm.description.trim() || undefined,
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:afterMutateAsync",
+          message: "Add to Rotation mutateAsync resolved",
+          data: { createdId: (result as { id?: string })?.id },
+          timestamp: Date.now(),
+          hypothesisId: "A,B",
+        }),
+      }).catch(() => {});
+      // #endregion
       await queryClient.refetchQueries({ queryKey: ["dinners-rotation"] });
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:afterRefetch",
+          message: "Refetch completed, setting view to rotation",
+          data: {},
+          timestamp: Date.now(),
+          hypothesisId: "B,C",
+        }),
+      }).catch(() => {});
+      // #endregion
       setEditingId(null);
       setView("rotation");
-    } catch {
+    } catch (err) {
+      // #region agent log
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:handleAddToRotationFromEdit:catch",
+          message: "Add to Rotation failed",
+          data: { error: String(err), name: (err as Error)?.name },
+          timestamp: Date.now(),
+          hypothesisId: "A,E",
+        }),
+      }).catch(() => {});
+      // #endregion
       // Mutation already surfaces error
     }
   };
@@ -460,6 +574,23 @@ export default function DinnersWidget({
       clearExpandToView?.();
     }
   }, [isExpanded, expandToView, clearExpandToView]);
+
+  useEffect(() => {
+    if (view === "rotation") {
+      fetch("http://127.0.0.1:7358/ingest/4d16a8e5-d343-4286-881d-5d12a5a17854", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "05439c" },
+        body: JSON.stringify({
+          sessionId: "05439c",
+          location: "DinnersWidget.tsx:view===rotation",
+          message: "Rotation view active, rotationItems length",
+          data: { rotationItemsLength: rotationItems.length, view },
+          timestamp: Date.now(),
+          hypothesisId: "C,D",
+        }),
+      }).catch(() => {});
+    }
+  }, [view, rotationItems.length]);
 
   const openRotationFromCollapsed = () => {
     if (onExpandToRotation) {
