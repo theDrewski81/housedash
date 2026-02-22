@@ -401,11 +401,8 @@ export default function DinnersWidget({
     if (fromSlot < 0) return;
 
     let toSlot: number;
-    const overIdStr = typeof over.id === "string" ? over.id : String(over.id);
-    const isSlotDroppable =
-      typeof over.id === "string" && over.id.startsWith("slot-");
-    if (isSlotDroppable) {
-      toSlot = parseInt(overIdStr.replace("slot-", ""), 10);
+    if (typeof over.id === "string" && over.id.startsWith("slot-")) {
+      toSlot = parseInt(over.id.replace("slot-", ""), 10);
       if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
     } else {
       toSlot = slots.findIndex((s) => s?.id === over.id);
@@ -425,42 +422,6 @@ export default function DinnersWidget({
         date: format(dates[fromSlot], "yyyy-MM-dd"),
       });
     }
-
-    // #region agent log
-    fetch(
-      "http://127.0.0.1:7796/ingest/a40eb657-02c8-43a9-aa68-0dd8089b4fd0",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "4119a3",
-        },
-        body: JSON.stringify({
-          sessionId: "4119a3",
-          runId: "drag-end",
-          hypothesisId: "H1,H2,H3,H4,H5",
-          location: "DinnersWidget.tsx:handleDragEnd",
-          message: "Drag end: over.id, slots, dates",
-          data: {
-            activeId: active.id,
-            overId: over.id,
-            overIdStr,
-            isSlotDroppable,
-            fromSlot,
-            toSlot,
-            dateFromSlot: format(dates[fromSlot], "yyyy-MM-dd"),
-            dateToSlot: format(dates[toSlot], "yyyy-MM-dd"),
-            movedMealName: movedDinner.mealName,
-            occupantId: occupant?.id ?? null,
-            occupantMealName: occupant?.mealName ?? null,
-            updates: updates.map((u) => ({ ...u })),
-            slotIdsByIndex: slots.map((s, i) => ({ i, id: s?.id ?? null, name: s?.mealName ?? "empty" })),
-          },
-          timestamp: Date.now(),
-        }),
-      }
-    ).catch(() => {});
-    // #endregion
 
     for (const { id, date } of updates) {
       await updateMutation.mutateAsync({ id, data: { date } });
