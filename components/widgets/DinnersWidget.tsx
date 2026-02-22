@@ -35,6 +35,15 @@ interface RotationItem {
   description: string | null;
 }
 
+function isValidHttpUrl(s: string): boolean {
+  try {
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 const ROW_HEIGHT = "min-h-[3.5rem]";
 
@@ -190,7 +199,12 @@ export default function DinnersWidget({
 }: DinnersWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newMeal, setNewMeal] = useState({ mealName: "", description: "" });
+  const [newMeal, setNewMeal] = useState({
+    mealName: "",
+    description: "",
+    url: "",
+    ingredients: "",
+  });
   const [activeId, setActiveId] = useState<string | null>(null);
   const [view, setView] = useState<"weekly" | "edit" | "rotation">("weekly");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -260,6 +274,8 @@ export default function DinnersWidget({
     mutationFn: async (body: {
       mealName: string;
       description?: string;
+      url?: string | null;
+      ingredients?: string | null;
       date: string;
     }) => {
       const res = await fetch("/api/widgets/dinners", {
@@ -273,7 +289,12 @@ export default function DinnersWidget({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dinners"] });
       setShowAddForm(false);
-      setNewMeal({ mealName: "", description: "" });
+      setNewMeal({
+        mealName: "",
+        description: "",
+        url: "",
+        ingredients: "",
+      });
       setAddToDinnerDialogItem(null);
     },
   });
@@ -355,6 +376,8 @@ export default function DinnersWidget({
     createMutation.mutate({
       mealName: newMeal.mealName.trim(),
       description: newMeal.description.trim() || undefined,
+      url: newMeal.url.trim() || undefined,
+      ingredients: newMeal.ingredients.trim() || undefined,
       date,
     });
   };
@@ -389,28 +412,15 @@ export default function DinnersWidget({
     if (fromSlot === toSlot) return;
 
     const movedDinner = slots[fromSlot]!;
-    const updates: { id: string; date: string }[] = [];
-
-    if (toSlot < fromSlot) {
+    const occupant = slots[toSlot] ?? null;
+    const updates: { id: string; date: string }[] = [
+      { id: movedDinner.id, date: format(dates[toSlot], "yyyy-MM-dd") },
+    ];
+    if (occupant) {
       updates.push({
-        id: movedDinner.id,
-        date: format(dates[toSlot], "yyyy-MM-dd"),
+        id: occupant.id,
+        date: format(dates[fromSlot], "yyyy-MM-dd"),
       });
-      for (let j = toSlot; j < fromSlot; j++) {
-        const d = slots[j];
-        if (d)
-          updates.push({ id: d.id, date: format(dates[j + 1], "yyyy-MM-dd") });
-      }
-    } else {
-      updates.push({
-        id: movedDinner.id,
-        date: format(dates[toSlot], "yyyy-MM-dd"),
-      });
-      for (let j = fromSlot + 1; j <= toSlot; j++) {
-        const d = slots[j];
-        if (d)
-          updates.push({ id: d.id, date: format(dates[j - 1], "yyyy-MM-dd") });
-      }
     }
 
     for (const { id, date } of updates) {
@@ -472,6 +482,9 @@ export default function DinnersWidget({
 
   const currentContent = (
     <div className="space-y-2">
+      <div className="text-xs font-medium uppercase text-gray-400">
+        Tonight&apos;s Meal:
+      </div>
       {tonightDinner ? (
         <>
           <div className="text-lg font-semibold">{tonightDinner.mealName}</div>
@@ -516,6 +529,16 @@ export default function DinnersWidget({
           onChange={(e) => setEditForm((f) => ({ ...f, url: e.target.value }))}
           className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
         />
+        {editForm.url.trim() && isValidHttpUrl(editForm.url.trim()) && (
+          <a
+            href={editForm.url.trim()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            Open recipe in new window
+          </a>
+        )}
         <textarea
           placeholder="Ingredients (optional — for grocery list later)"
           value={editForm.ingredients}
@@ -640,6 +663,34 @@ export default function DinnersWidget({
               setNewMeal((m) => ({ ...m, description: e.target.value }))
             }
             className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
+          />
+          <input
+            type="url"
+            placeholder="Recipe URL (optional)"
+            value={newMeal.url}
+            onChange={(e) =>
+              setNewMeal((m) => ({ ...m, url: e.target.value }))
+            }
+            className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
+          />
+          {newMeal.url.trim() && isValidHttpUrl(newMeal.url.trim()) && (
+            <a
+              href={newMeal.url.trim()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              Open recipe in new window
+            </a>
+          )}
+          <textarea
+            placeholder="Ingredients (optional — for grocery list later)"
+            value={newMeal.ingredients}
+            onChange={(e) =>
+              setNewMeal((m) => ({ ...m, ingredients: e.target.value }))
+            }
+            rows={3}
+            className="w-full rounded bg-gray-600 px-3 py-2 text-sm resize-y min-h-[4rem]"
           />
           <button
             type="button"
