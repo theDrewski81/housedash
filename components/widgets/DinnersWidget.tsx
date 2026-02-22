@@ -11,7 +11,7 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
-  rectIntersection,
+  pointerWithin,
 } from "@dnd-kit/core";
 import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -749,7 +749,7 @@ export default function DinnersWidget({
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={rectIntersection}
+          collisionDetection={pointerWithin}
           onDragStart={(e) => setActiveId(e.active.id as string)}
           onDragEnd={handleDragEnd}
         >
