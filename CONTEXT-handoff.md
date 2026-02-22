@@ -43,7 +43,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 | External | OpenWeatherMap (weather + geocoding), Google Calendar API |
 | Run | Node; Docker Compose (postgres + app); migrate service (profile tools, Debian); optional Cloudflare Tunnel |
 
-Deploy: `git pull` → `docker compose build --no-cache` → `docker compose up -d postgres` → `docker compose --profile tools run --rm migrate` → `docker compose up -d`. Migrations must run before the app so weather (and other) columns exist.
+Deploy: `git pull` → `docker compose build --no-cache` (and `docker compose build --no-cache migrate` when new migrations exist) → `docker compose up -d postgres` → `docker compose --profile tools run --rm migrate` → `docker compose up -d`. Migrations must run before the app; rebuild the migrate image so it includes the latest migration files.
 
 ## Open / next
 
