@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
-import { appendFileSync } from "fs";
-import { join } from "path";
+
+function isMissingTableError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  return /relation "dinner_rotations" does not exist|Table.*dinner_rotations.*doesn't exist/i.test(msg);
+}
 
 export async function GET() {
   try {
@@ -14,6 +17,12 @@ export async function GET() {
     return NextResponse.json(items);
   } catch (error) {
     console.error("Dinner rotation API error:", error);
+    if (isMissingTableError(error)) {
+      return NextResponse.json(
+        { error: "Rotation not available. Run database migrations." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: "Failed to fetch rotation" },
       { status: 500 }
@@ -22,28 +31,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const logPath = join(process.cwd(), "debug-05439c.log");
-  const log = (loc: string, msg: string, data: object, hypothesisId: string) => {
-    try {
-      const line =
-        JSON.stringify({
-          sessionId: "05439c",
-          location: loc,
-          message: msg,
-          data,
-          timestamp: Date.now(),
-          hypothesisId,
-        }) + "\n";
-      appendFileSync(logPath, line);
-      console.error("[DEBUG rotation]", loc, msg, data);
-    } catch (_) {}
-  };
   try {
     const user = await requireAuth();
     const body = await request.json();
-    // #region agent log
-    log("rotation/route.ts:POST:entry", "API POST rotation", { mealName: body?.mealName?.slice(0, 30), userId: user?.id?.slice(0, 8) }, "F");
-    // #endregion
     const item = await prisma.dinnerRotation.create({
       data: {
         userId: user.id,
@@ -51,15 +41,15 @@ export async function POST(request: NextRequest) {
         description: body.description ?? null,
       },
     });
-    // #region agent log
-    log("rotation/route.ts:POST:afterCreate", "Rotation item created", { id: item.id }, "F");
-    // #endregion
     return NextResponse.json(item);
   } catch (error) {
-    // #region agent log
-    log("rotation/route.ts:POST:catch", "API POST rotation error", { error: String(error) }, "A,F");
-    // #endregion
     console.error("Dinner rotation API error:", error);
+    if (isMissingTableError(error)) {
+      return NextResponse.json(
+        { error: "Rotation not available. Run database migrations." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: "Failed to add to rotation" },
       { status: 500 }

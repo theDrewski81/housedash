@@ -7,3 +7,8 @@
 {"sessionId":"05439c","location":"DinnersWidget.tsx:mutationFn:afterFetch","message":"POST rotation response","data":{"ok":false,"status":500},"timestamp":1771722554546,"hypothesisId":"A,F"}
 {"sessionId":"05439c","location":"DinnersWidget.tsx:handleAddToRotationFromEdit:catch","message":"Add to Rotation failed","data":{"error":"Error: Failed to add to rotation","name":"Error"},"timestamp":1771722554547,"hypothesisId":"A,E"}
 {"sessionId":"05439c","location":"DinnersWidget.tsx:view===rotation","message":"Rotation view active, rotationItems length","data":{"rotationItemsLength":0,"view":"rotation"},"timestamp":1771722561550,"hypothesisId":"C,D"}
+{"sessionId":"05439c","location":"DinnersWidget.tsx:handleAddToRotationFromEdit:entry","message":"Add to Rotation handler called","data":{"mealName":"Fish & Chips","hasDescription":true},"timestamp":1771723405436,"hypothesisId":"E"}
+{"sessionId":"05439c","location":"DinnersWidget.tsx:mutationFn:beforeFetch","message":"POST rotation about to run","data":{"mealName":"Fish & Chips"},"timestamp":1771723405438,"hypothesisId":"A"}
+{"sessionId":"05439c","location":"DinnersWidget.tsx:mutationFn:afterFetch","message":"POST rotation response","data":{"ok":false,"status":500},"timestamp":1771723405632,"hypothesisId":"A,F"}
+{"sessionId":"05439c","location":"DinnersWidget.tsx:handleAddToRotationFromEdit:catch","message":"Add to Rotation failed","data":{"error":"Error: Failed to add to rotation","name":"Error"},"timestamp":1771723405633,"hypothesisId":"A,E"}
+{"sessionId":"05439c","location":"DinnersWidget.tsx:view===rotation","message":"Rotation view active, rotationItems length","data":{"rotationItemsLength":0,"view":"rotation"},"timestamp":1771723429779,"hypothesisId":"C,D"}
