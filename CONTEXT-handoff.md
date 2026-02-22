@@ -32,6 +32,7 @@ This doc helps bring Cursor AI (or a human) up to speed when switching machines 
 - **User management:** First Google sign-in becomes admin; toggle to allow new sign-ups (approval queue, one per email). Add New User, user list (edit/delete/sign out), approval queue. "Log user management actions" on Logs page. Admin nav and routes gated by `requireAdmin()`.
 - **Weather location:** Admin → Settings has a single "Location" input (city, state or zip). On save, geocode (OpenWeather Geocoding API) runs; result is stored in AppConfig (weatherLat, weatherLon, weatherLocationName). Weather widget uses that location via GET /api/widgets/weather. If migrations adding weather columns have not been run: Settings page shows banner "Migrations required to save weather location…"; GET settings still loads (getAppConfig returns defaults on schema error); PATCH returns 503 with friendly message. Schema-status endpoint GET /api/admin/settings/schema-status returns weatherLocationSupported so the banner can show. Migrations: `20250215000000_add_weather_location_to_app_config` (weather_lat, weather_lon), `20250216000000_add_weather_location_name_to_app_config`.
 - **Collapsed weather widget:** Current temp + conditions on left; today’s high/low on right; next sunrise/sunset instead of pressure (data from OpenWeather current weather).
+- **Handoff:** Deployment section in this file was recently clarified (rebuild migrate image when new migrations exist; run migrations before app).
 
 ## Architecture / stack
 
