@@ -25,8 +25,7 @@ export async function POST(request: NextRequest) {
   const logPath = join(process.cwd(), "debug-05439c.log");
   const log = (loc: string, msg: string, data: object, hypothesisId: string) => {
     try {
-      appendFileSync(
-        logPath,
+      const line =
         JSON.stringify({
           sessionId: "05439c",
           location: loc,
@@ -34,8 +33,9 @@ export async function POST(request: NextRequest) {
           data,
           timestamp: Date.now(),
           hypothesisId,
-        }) + "\n"
-      );
+        }) + "\n";
+      appendFileSync(logPath, line);
+      console.error("[DEBUG rotation]", loc, msg, data);
     } catch (_) {}
   };
   try {
