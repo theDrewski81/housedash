@@ -11,8 +11,8 @@ import {
   useSensors,
   useDraggable,
   useDroppable,
-  pointerWithin,
 } from "@dnd-kit/core";
+import type { CollisionDetection } from "@dnd-kit/core";
 import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -46,6 +46,37 @@ function isValidHttpUrl(s: string): boolean {
 
 const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 const ROW_HEIGHT = "min-h-[3.5rem]";
+
+/**
+ * Picks the slot whose vertical center is closest to the pointer's y.
+ * Avoids off-by-one when pointer is near a row boundary (no overlapping hit areas).
+ */
+const slotClosestToPointerY: CollisionDetection = (args) => {
+  const { pointerCoordinates, droppableRects, droppableContainers } = args;
+  if (!pointerCoordinates) return [];
+
+  const slotContainers = droppableContainers.filter(
+    (c) => typeof c.id === "string" && c.id.startsWith("slot-")
+  );
+  if (slotContainers.length === 0) return [];
+
+  let bestId: string | null = null;
+  let bestDistance = Infinity;
+
+  for (const { id } of slotContainers) {
+    const rect = droppableRects.get(id);
+    if (!rect) continue;
+    const centerY = rect.top + (rect.bottom - rect.top) / 2;
+    const distance = Math.abs(pointerCoordinates.y - centerY);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestId = id as string;
+    }
+  }
+
+  if (bestId == null) return [];
+  return [{ id: bestId, data: { value: -bestDistance } }];
+};
 
 function DayDateSquare({ date }: { date: Date }) {
   return (
@@ -739,7 +770,7 @@ export default function DinnersWidget({
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={pointerWithin}
+          collisionDetection={slotClosestToPointerY}
           onDragStart={(e) => setActiveId(e.active.id as string)}
           onDragEnd={handleDragEnd}
         >
