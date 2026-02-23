@@ -1,18 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Widget from "@/components/ui/Widget";
-import {
-  DndContext,
-  DragEndEvent,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  useDraggable,
-  useDroppable,
-} from "@dnd-kit/core";
-import type { CollisionDetection } from "@dnd-kit/core";
 import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -44,44 +33,7 @@ function isValidHttpUrl(s: string): boolean {
   }
 }
 
-const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 const ROW_HEIGHT = "min-h-[3.5rem]";
-
-/** 3.5rem in px; row height; space-y-3 = 12px gap */
-const ROW_HEIGHT_PX = 56;
-const ROW_GAP_PX = 12;
-const ROW_TOTAL_PX = ROW_HEIGHT_PX + ROW_GAP_PX;
-
-/**
- * Picks the slot whose vertical center is closest to the pointer's y (for highlight only).
- * The actual drop target is computed in handleDragEnd from the last pointer position vs list bounds.
- */
-const slotClosestToPointerY: CollisionDetection = (args) => {
-  const { pointerCoordinates, droppableRects, droppableContainers } = args;
-  if (!pointerCoordinates) return [];
-
-  const slotContainers = droppableContainers.filter(
-    (c) => typeof c.id === "string" && c.id.startsWith("slot-")
-  );
-  if (slotContainers.length === 0) return [];
-
-  let bestId: string | null = null;
-  let bestDistance = Infinity;
-
-  for (const { id } of slotContainers) {
-    const rect = droppableRects.get(id);
-    if (!rect) continue;
-    const centerY = rect.top + (rect.bottom - rect.top) / 2;
-    const distance = Math.abs(pointerCoordinates.y - centerY);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestId = id as string;
-    }
-  }
-
-  if (bestId == null) return [];
-  return [{ id: bestId, data: { value: -bestDistance } }];
-};
 
 function DayDateSquare({ date }: { date: Date }) {
   return (
@@ -98,21 +50,36 @@ function DayDateSquare({ date }: { date: Date }) {
 
 function DinnerCard({
   dinner,
+  isSelected,
   onDelete,
+  onSelect,
   onDoubleClick,
-  isOverlay,
 }: {
   dinner: Dinner;
+  isSelected: boolean;
   onDelete: (id: string) => void;
+  onSelect: (id: string) => void;
   onDoubleClick?: (id: string) => void;
-  isOverlay?: boolean;
 }) {
-  const inner = (
+  return (
     <div
       className={`flex items-center gap-3 rounded bg-gray-700 px-3 py-2 ${ROW_HEIGHT} ${
-        isOverlay ? "shadow-lg ring-2 ring-blue-500" : ""
+        isSelected ? "ring-2 ring-blue-500" : ""
       }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect(dinner.id);
+      }}
       onDoubleClick={() => onDoubleClick?.(dinner.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(dinner.id);
+        }
+      }}
+      aria-pressed={isSelected}
     >
       <div className="min-w-0 flex-1 flex items-center gap-2 flex-nowrap">
         <span className="font-medium truncate">{dinner.mealName}</span>
@@ -135,79 +102,51 @@ function DinnerCard({
       </button>
     </div>
   );
-
-  if (isOverlay) return inner;
-
-  return (
-    <DraggableDinner id={dinner.id}>
-      {inner}
-    </DraggableDinner>
-  );
-}
-
-function DraggableDinner({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id });
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`touch-none ${isDragging ? "opacity-50" : ""}`}
-      {...listeners}
-      {...attributes}
-    >
-      <div className="cursor-grab active:cursor-grabbing">{children}</div>
-    </div>
-  );
 }
 
 function SlotRow({
-  slotId,
   slotIndex,
   date,
   dinner,
+  selectedDinnerId,
+  onSlotClick,
+  onSelectDinner,
   onDelete,
   onDoubleClick,
 }: {
-  slotId: string;
   slotIndex: number;
   date: Date;
   dinner: Dinner | null;
+  selectedDinnerId: string | null;
+  onSlotClick: (slotIndex: number) => void;
+  onSelectDinner: (id: string) => void;
   onDelete: (id: string) => void;
   onDoubleClick: (id: string) => void;
 }) {
-  const { isOver, setNodeRef } = useDroppable({ id: slotId });
   const hasDinner = dinner !== null;
 
   return (
     <div className="flex items-stretch gap-3">
       <DayDateSquare date={date} />
       <div
-        ref={setNodeRef}
-        data-slot-index={slotIndex}
-        className={`flex-1 rounded transition-colors overflow-hidden shrink-0 h-[3.5rem] ${
-          hasDinner
-            ? ""
-            : isOver
-              ? "border-2 border-blue-500 bg-gray-700/50"
-              : "border-2 border-dashed border-gray-600 bg-gray-700/30"
-        }`}
+        className="flex-1 rounded transition-colors overflow-hidden shrink-0 h-[3.5rem] border-2 border-dashed border-gray-600 bg-gray-700/30 cursor-pointer hover:border-gray-500"
+        onClick={() => onSlotClick(slotIndex)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSlotClick(slotIndex);
+          }
+        }}
       >
         {dinner ? (
           <div className="h-full min-h-0 p-1 overflow-hidden">
             <DinnerCard
               dinner={dinner}
+              isSelected={selectedDinnerId === dinner.id}
               onDelete={onDelete}
+              onSelect={onSelectDinner}
               onDoubleClick={onDoubleClick}
             />
           </div>
@@ -244,7 +183,6 @@ export default function DinnersWidget({
     url: "",
     ingredients: "",
   });
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [view, setView] = useState<"weekly" | "edit" | "rotation">("weekly");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -256,17 +194,7 @@ export default function DinnersWidget({
   const [addToDinnerDialogItem, setAddToDinnerDialogItem] =
     useState<RotationItem | null>(null);
   const [removeFromRotationId, setRemoveFromRotationId] = useState<string | null>(null);
-
-  const listContainerRef = useRef<HTMLDivElement>(null);
-  const lastPointerYRef = useRef<number | null>(null);
-  const pointerMoveListenerRef = useRef<((e: PointerEvent) => void) | null>(null);
-  const slotRectsRef = useRef<{ top: number; bottom: number }[]>([]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
-  );
+  const [selectedDinnerId, setSelectedDinnerId] = useState<string | null>(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
   const dates = useMemo(
@@ -436,54 +364,20 @@ export default function DinnersWidget({
     });
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleSelectDinner = (id: string) => {
+    setSelectedDinnerId((prev) => (prev === id ? null : id));
+  };
 
-    if (pointerMoveListenerRef.current) {
-      document.removeEventListener("pointermove", pointerMoveListenerRef.current);
-      pointerMoveListenerRef.current = null;
-    }
+  const handleSlotClick = async (toSlot: number) => {
+    if (selectedDinnerId == null) return;
 
-    setActiveId(null);
-    if (!over || typeof active.id !== "string") return;
-
-    const fromSlot = slots.findIndex((s) => s?.id === active.id);
+    const fromSlot = slots.findIndex((s) => s?.id === selectedDinnerId);
     if (fromSlot < 0) return;
 
-    let toSlot: number;
-    let slotSource: "pointer" | "over" = "over";
-    if (typeof over.id === "string" && over.id.startsWith("slot-")) {
-      const lastY = lastPointerYRef.current;
-      const rects = slotRectsRef.current;
-      if (lastY != null && rects.length === 7) {
-        const idx = rects.findIndex((r) => lastY >= r.top && lastY <= r.bottom);
-        if (idx >= 0) {
-          toSlot = idx;
-          slotSource = "pointer";
-        } else {
-          const nearest = rects.reduce(
-            (best, r, i) => {
-              const mid = (r.top + r.bottom) / 2;
-              const dist = Math.abs(lastY - mid);
-              return dist < best.dist ? { i, dist } : best;
-            },
-            { i: 0, dist: Infinity }
-          );
-          toSlot = Math.max(0, Math.min(6, nearest.i));
-          slotSource = "pointer";
-        }
-      } else {
-        toSlot = parseInt(over.id.replace("slot-", ""), 10);
-        if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
-      }
-    } else {
-      toSlot = slots.findIndex((s) => s?.id === over.id);
-      if (toSlot < 0) return;
+    if (fromSlot === toSlot) {
+      setSelectedDinnerId(null);
+      return;
     }
-
-    lastPointerYRef.current = null;
-
-    if (fromSlot === toSlot) return;
 
     const movedDinner = slots[fromSlot]!;
     const occupant = slots[toSlot] ?? null;
@@ -497,40 +391,11 @@ export default function DinnersWidget({
       });
     }
 
-    // #region agent log
-    fetch(
-      "http://127.0.0.1:7796/ingest/a40eb657-02c8-43a9-aa68-0dd8089b4fd0",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "4119a3",
-        },
-        body: JSON.stringify({
-          sessionId: "4119a3",
-          runId: "post-fix",
-          hypothesisId: "droppable-overlap",
-          location: "DinnersWidget.tsx:handleDragEnd",
-          message: "Drag end: over.id, toSlot, dateToSlot",
-          data: {
-            overId: over.id,
-            slotSource,
-            fromSlot,
-            toSlot,
-            dateToSlot: format(dates[toSlot], "yyyy-MM-dd"),
-            dateFromSlot: format(dates[fromSlot], "yyyy-MM-dd"),
-            updates: updates.map((u) => ({ ...u })),
-          },
-          timestamp: Date.now(),
-        }),
-      }
-    ).catch(() => {});
-    // #endregion
-
     for (const { id, date } of updates) {
       await updateMutation.mutateAsync({ id, data: { date } });
     }
     queryClient.invalidateQueries({ queryKey: ["dinners"] });
+    setSelectedDinnerId(null);
   };
 
   const handleDoubleClick = (id: string) => {
@@ -809,71 +674,30 @@ export default function DinnersWidget({
         </div>
       )}
 
+      {selectedDinnerId && (
+        <p className="text-sm text-blue-400">
+          Click a day to move or swap. Click the selected meal again to cancel.
+        </p>
+      )}
+
       {isLoading ? (
         <div className="text-gray-400">Loading...</div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={slotClosestToPointerY}
-          onDragStart={(e) => {
-            setActiveId(e.active.id as string);
-            lastPointerYRef.current = null;
-            const container = listContainerRef.current;
-            if (container) {
-              const els = container.querySelectorAll<HTMLElement>("[data-slot-index]");
-              slotRectsRef.current = Array.from(els)
-                .sort(
-                  (a, b) =>
-                    parseInt(a.dataset.slotIndex ?? "0", 10) -
-                    parseInt(b.dataset.slotIndex ?? "0", 10)
-                )
-                .map((el) => {
-                  const r = el.getBoundingClientRect();
-                  return { top: r.top, bottom: r.bottom };
-                });
-            } else {
-              slotRectsRef.current = [];
-            }
-            const onPointerMove = (ev: PointerEvent) => {
-              lastPointerYRef.current = ev.clientY;
-            };
-            document.addEventListener("pointermove", onPointerMove);
-            pointerMoveListenerRef.current = onPointerMove;
-          }}
-          onDragEnd={handleDragEnd}
-        >
-          <div ref={listContainerRef} className="space-y-3">
-            {dates.map((date, i) => (
-              <SlotRow
-                key={SLOT_IDS[i]}
-                slotId={SLOT_IDS[i]}
-                slotIndex={i}
-                date={date}
-                dinner={slots[i] ?? null}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onDoubleClick={handleDoubleClick}
-              />
-            ))}
-          </div>
-
-          <DragOverlay>
-            {activeId ? (
-              (() => {
-                const dinner = dinners.find((d) => d.id === activeId);
-                if (!dinner) return null;
-                return (
-                  <div className="w-[min(100%,20rem)]">
-                    <DinnerCard
-                      dinner={dinner}
-                      onDelete={() => {}}
-                      isOverlay
-                    />
-                  </div>
-                );
-              })()
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        <div className="space-y-3">
+          {dates.map((date, i) => (
+            <SlotRow
+              key={format(date, "yyyy-MM-dd")}
+              slotIndex={i}
+              date={date}
+              dinner={slots[i] ?? null}
+              selectedDinnerId={selectedDinnerId}
+              onSlotClick={handleSlotClick}
+              onSelectDinner={handleSelectDinner}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              onDoubleClick={handleDoubleClick}
+            />
+          ))}
+        </div>
       )}
 
       <button
