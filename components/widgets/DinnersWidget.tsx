@@ -47,9 +47,13 @@ function isValidHttpUrl(s: string): boolean {
 const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 const ROW_HEIGHT = "min-h-[3.5rem]";
 
+/** 3.5rem in px for pointer offset; row height used in layout */
+const ROW_HEIGHT_PX = 56;
+
 /**
  * Picks the slot whose vertical center is closest to the pointer's y.
- * Avoids off-by-one when pointer is near a row boundary (no overlapping hit areas).
+ * Uses a small downward bias (half row) so the chosen slot matches the visually
+ * highlighted row when pointer/droppable coords are offset (e.g. from overlay or scroll).
  */
 const slotClosestToPointerY: CollisionDetection = (args) => {
   const { pointerCoordinates, droppableRects, droppableContainers } = args;
@@ -60,6 +64,9 @@ const slotClosestToPointerY: CollisionDetection = (args) => {
   );
   if (slotContainers.length === 0) return [];
 
+  const pointerY =
+    pointerCoordinates.y + ROW_HEIGHT_PX / 2;
+
   let bestId: string | null = null;
   let bestDistance = Infinity;
 
@@ -67,7 +74,7 @@ const slotClosestToPointerY: CollisionDetection = (args) => {
     const rect = droppableRects.get(id);
     if (!rect) continue;
     const centerY = rect.top + (rect.bottom - rect.top) / 2;
-    const distance = Math.abs(pointerCoordinates.y - centerY);
+    const distance = Math.abs(pointerY - centerY);
     if (distance < bestDistance) {
       bestDistance = distance;
       bestId = id as string;
