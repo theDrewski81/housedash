@@ -453,8 +453,8 @@ export default function DinnersWidget({
       const lastY = lastPointerYRef.current;
       if (container && lastY != null) {
         const rect = container.getBoundingClientRect();
-        const relativeY = lastY - rect.top - ROW_HEIGHT_PX / 2;
-        const slotFromPointer = Math.round(relativeY / ROW_TOTAL_PX);
+        const relativeY = lastY - rect.top;
+        const slotFromPointer = Math.floor(relativeY / ROW_TOTAL_PX);
         toSlot = Math.max(0, Math.min(6, slotFromPointer));
         slotSource = "pointer";
       } else {
