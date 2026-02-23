@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Widget from "@/components/ui/Widget";
 import {
   DndContext,
@@ -47,13 +47,14 @@ function isValidHttpUrl(s: string): boolean {
 const SLOT_IDS = ["slot-0", "slot-1", "slot-2", "slot-3", "slot-4", "slot-5", "slot-6"] as const;
 const ROW_HEIGHT = "min-h-[3.5rem]";
 
-/** 3.5rem in px for pointer offset; row height used in layout */
+/** 3.5rem in px; row height; space-y-3 = 12px gap */
 const ROW_HEIGHT_PX = 56;
+const ROW_GAP_PX = 12;
+const ROW_TOTAL_PX = ROW_HEIGHT_PX + ROW_GAP_PX;
 
 /**
- * Picks the slot whose vertical center is closest to the pointer's y.
- * Uses a small downward bias (half row) so the chosen slot matches the visually
- * highlighted row when pointer/droppable coords are offset (e.g. from overlay or scroll).
+ * Picks the slot whose vertical center is closest to the pointer's y (for highlight only).
+ * The actual drop target is computed in handleDragEnd from the last pointer position vs list bounds.
  */
 const slotClosestToPointerY: CollisionDetection = (args) => {
   const { pointerCoordinates, droppableRects, droppableContainers } = args;
@@ -64,9 +65,6 @@ const slotClosestToPointerY: CollisionDetection = (args) => {
   );
   if (slotContainers.length === 0) return [];
 
-  const pointerY =
-    pointerCoordinates.y + ROW_HEIGHT_PX / 2;
-
   let bestId: string | null = null;
   let bestDistance = Infinity;
 
@@ -74,7 +72,7 @@ const slotClosestToPointerY: CollisionDetection = (args) => {
     const rect = droppableRects.get(id);
     if (!rect) continue;
     const centerY = rect.top + (rect.bottom - rect.top) / 2;
-    const distance = Math.abs(pointerY - centerY);
+    const distance = Math.abs(pointerCoordinates.y - centerY);
     if (distance < bestDistance) {
       bestDistance = distance;
       bestId = id as string;
@@ -256,6 +254,10 @@ export default function DinnersWidget({
     useState<RotationItem | null>(null);
   const [removeFromRotationId, setRemoveFromRotationId] = useState<string | null>(null);
 
+  const listContainerRef = useRef<HTMLDivElement>(null);
+  const lastPointerYRef = useRef<number | null>(null);
+  const pointerMoveListenerRef = useRef<((e: PointerEvent) => void) | null>(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -432,6 +434,12 @@ export default function DinnersWidget({
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+
+    if (pointerMoveListenerRef.current) {
+      document.removeEventListener("pointermove", pointerMoveListenerRef.current);
+      pointerMoveListenerRef.current = null;
+    }
+
     setActiveId(null);
     if (!over || typeof active.id !== "string") return;
 
@@ -439,13 +447,26 @@ export default function DinnersWidget({
     if (fromSlot < 0) return;
 
     let toSlot: number;
+    let slotSource: "pointer" | "over" = "over";
     if (typeof over.id === "string" && over.id.startsWith("slot-")) {
-      toSlot = parseInt(over.id.replace("slot-", ""), 10);
-      if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
+      const container = listContainerRef.current;
+      const lastY = lastPointerYRef.current;
+      if (container && lastY != null) {
+        const rect = container.getBoundingClientRect();
+        const relativeY = lastY - rect.top - ROW_HEIGHT_PX / 2;
+        const slotFromPointer = Math.round(relativeY / ROW_TOTAL_PX);
+        toSlot = Math.max(0, Math.min(6, slotFromPointer));
+        slotSource = "pointer";
+      } else {
+        toSlot = parseInt(over.id.replace("slot-", ""), 10);
+        if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
+      }
     } else {
       toSlot = slots.findIndex((s) => s?.id === over.id);
       if (toSlot < 0) return;
     }
+
+    lastPointerYRef.current = null;
 
     if (fromSlot === toSlot) return;
 
@@ -478,6 +499,7 @@ export default function DinnersWidget({
           message: "Drag end: over.id, toSlot, dateToSlot",
           data: {
             overId: over.id,
+            slotSource,
             fromSlot,
             toSlot,
             dateToSlot: format(dates[toSlot], "yyyy-MM-dd"),
@@ -778,10 +800,18 @@ export default function DinnersWidget({
         <DndContext
           sensors={sensors}
           collisionDetection={slotClosestToPointerY}
-          onDragStart={(e) => setActiveId(e.active.id as string)}
+          onDragStart={(e) => {
+            setActiveId(e.active.id as string);
+            lastPointerYRef.current = null;
+            const onPointerMove = (ev: PointerEvent) => {
+              lastPointerYRef.current = ev.clientY;
+            };
+            document.addEventListener("pointermove", onPointerMove);
+            pointerMoveListenerRef.current = onPointerMove;
+          }}
           onDragEnd={handleDragEnd}
         >
-          <div className="space-y-3">
+          <div ref={listContainerRef} className="space-y-3">
             {dates.map((date, i) => (
               <SlotRow
                 key={SLOT_IDS[i]}
