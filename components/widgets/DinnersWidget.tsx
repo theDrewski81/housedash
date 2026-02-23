@@ -173,12 +173,14 @@ function DraggableDinner({
 
 function SlotRow({
   slotId,
+  slotIndex,
   date,
   dinner,
   onDelete,
   onDoubleClick,
 }: {
   slotId: string;
+  slotIndex: number;
   date: Date;
   dinner: Dinner | null;
   onDelete: (id: string) => void;
@@ -192,6 +194,7 @@ function SlotRow({
       <DayDateSquare date={date} />
       <div
         ref={setNodeRef}
+        data-slot-index={slotIndex}
         className={`flex-1 rounded transition-colors overflow-hidden shrink-0 h-[3.5rem] ${
           hasDinner
             ? ""
@@ -257,6 +260,7 @@ export default function DinnersWidget({
   const listContainerRef = useRef<HTMLDivElement>(null);
   const lastPointerYRef = useRef<number | null>(null);
   const pointerMoveListenerRef = useRef<((e: PointerEvent) => void) | null>(null);
+  const slotRectsRef = useRef<{ top: number; bottom: number }[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -449,14 +453,25 @@ export default function DinnersWidget({
     let toSlot: number;
     let slotSource: "pointer" | "over" = "over";
     if (typeof over.id === "string" && over.id.startsWith("slot-")) {
-      const container = listContainerRef.current;
       const lastY = lastPointerYRef.current;
-      if (container && lastY != null) {
-        const rect = container.getBoundingClientRect();
-        const relativeY = lastY - rect.top;
-        const slotFromPointer = Math.floor(relativeY / ROW_TOTAL_PX);
-        toSlot = Math.max(0, Math.min(6, slotFromPointer));
-        slotSource = "pointer";
+      const rects = slotRectsRef.current;
+      if (lastY != null && rects.length === 7) {
+        const idx = rects.findIndex((r) => lastY >= r.top && lastY <= r.bottom);
+        if (idx >= 0) {
+          toSlot = idx;
+          slotSource = "pointer";
+        } else {
+          const nearest = rects.reduce(
+            (best, r, i) => {
+              const mid = (r.top + r.bottom) / 2;
+              const dist = Math.abs(lastY - mid);
+              return dist < best.dist ? { i, dist } : best;
+            },
+            { i: 0, dist: Infinity }
+          );
+          toSlot = Math.max(0, Math.min(6, nearest.i));
+          slotSource = "pointer";
+        }
       } else {
         toSlot = parseInt(over.id.replace("slot-", ""), 10);
         if (Number.isNaN(toSlot) || toSlot < 0 || toSlot > 6) return;
@@ -803,6 +818,22 @@ export default function DinnersWidget({
           onDragStart={(e) => {
             setActiveId(e.active.id as string);
             lastPointerYRef.current = null;
+            const container = listContainerRef.current;
+            if (container) {
+              const els = container.querySelectorAll<HTMLElement>("[data-slot-index]");
+              slotRectsRef.current = Array.from(els)
+                .sort(
+                  (a, b) =>
+                    parseInt(a.dataset.slotIndex ?? "0", 10) -
+                    parseInt(b.dataset.slotIndex ?? "0", 10)
+                )
+                .map((el) => {
+                  const r = el.getBoundingClientRect();
+                  return { top: r.top, bottom: r.bottom };
+                });
+            } else {
+              slotRectsRef.current = [];
+            }
             const onPointerMove = (ev: PointerEvent) => {
               lastPointerYRef.current = ev.clientY;
             };
@@ -816,6 +847,7 @@ export default function DinnersWidget({
               <SlotRow
                 key={SLOT_IDS[i]}
                 slotId={SLOT_IDS[i]}
+                slotIndex={i}
                 date={date}
                 dinner={slots[i] ?? null}
                 onDelete={(id) => deleteMutation.mutate(id)}
