@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import Widget from "@/components/ui/Widget";
-import { format, addDays, startOfDay, parseISO, isSameDay } from "date-fns";
+import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
@@ -225,21 +225,15 @@ export default function DinnersWidget({
   });
 
   const slots = useMemo(() => {
-    const result: (Dinner | null)[] = dates.map(() => null);
-    const sorted = [...dinners].sort(
-      (a, b) =>
-        new Date(a.date).getTime() - new Date(b.date).getTime() ||
-        a.orderIndex - b.orderIndex
-    );
-    for (const d of sorted) {
-      const dDate = parseISO(d.date);
-      let idx = dates.findIndex((dt) => isSameDay(dt, dDate));
-      if (idx < 0 || result[idx] !== null) {
-        idx = result.findIndex((s) => s === null);
-      }
-      if (idx >= 0) result[idx] = d;
-    }
-    return result;
+    const toLocalDateStr = (d: Dinner) =>
+      format(parseISO(d.date), "yyyy-MM-dd");
+    return dates.map((dt) => {
+      const target = format(dt, "yyyy-MM-dd");
+      const candidates = dinners
+        .filter((d) => toLocalDateStr(d) === target)
+        .sort((a, b) => a.orderIndex - b.orderIndex);
+      return candidates[0] ?? null;
+    });
   }, [dinners, dates]);
 
   const createMutation = useMutation({

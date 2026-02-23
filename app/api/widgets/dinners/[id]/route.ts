@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
+import { parseCalendarDate } from "@/lib/date-utils";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,7 +26,7 @@ export async function PATCH(
         }),
         ...(body.isComplete !== undefined && { isComplete: body.isComplete }),
         ...(body.orderIndex !== undefined && { orderIndex: body.orderIndex }),
-        ...(body.date && { date: new Date(body.date) }),
+        ...(body.date && { date: parseCalendarDate(body.date) }),
         ...(body.linkedDinnerId !== undefined && {
           linkedDinnerId: body.linkedDinnerId,
         }),

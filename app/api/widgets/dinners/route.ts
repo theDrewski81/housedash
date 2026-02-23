@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
+import { parseCalendarDate } from "@/lib/date-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,11 +10,14 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    const where: any = { userId: user.id };
+    const where: { userId: string; date?: { gte: Date; lte: Date } } = {
+      userId: user.id,
+    };
     if (startDate && endDate) {
+      // Use noon UTC for calendar-day stability; range includes full start/end days
       where.date = {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
+        gte: new Date(`${startDate}T00:00:00.000Z`),
+        lte: new Date(`${endDate}T23:59:59.999Z`),
       };
     }
 
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
     const dinner = await prisma.dinner.create({
       data: {
         userId: user.id,
-        date: new Date(body.date),
+        date: parseCalendarDate(body.date),
         mealName: body.mealName,
         description: body.description || null,
         url: body.url || null,
