@@ -185,7 +185,7 @@ function SlotRow({
       <DayDateSquare date={date} />
       <div
         ref={setNodeRef}
-        className={`flex-1 rounded transition-colors overflow-hidden shrink-0 min-h-[3.5rem] border-2 border-dashed ${
+        className={`flex-1 rounded transition-colors overflow-hidden shrink-0 min-h-[3.5rem] border-2 border-solid ${
           isOver
             ? "border-blue-500 bg-blue-900/20"
             : "border-gray-600 bg-gray-700/30"
