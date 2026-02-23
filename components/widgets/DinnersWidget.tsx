@@ -1,10 +1,20 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import Widget from "@/components/ui/Widget";
 import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import {
+  DndContext,
+  type DragEndEvent,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Dinner {
   id: string;
@@ -104,54 +114,92 @@ function DinnerCard({
   );
 }
 
+function DraggableDinnerCard({
+  dinner,
+  fromSlotIndex,
+  onDelete,
+  onDoubleClick,
+}: {
+  dinner: Dinner;
+  fromSlotIndex: number;
+  onDelete: (id: string) => void;
+  onDoubleClick: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: dinner.id,
+    data: { fromSlotIndex },
+  });
+  const style = transform
+    ? { transform: CSS.Translate.toString(transform) }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`h-full min-h-0 p-1 overflow-hidden touch-none ${
+        isDragging ? "opacity-50 cursor-grabbing" : "cursor-grab"
+      }`}
+    >
+      <DinnerCard
+        dinner={dinner}
+        isSelected={false}
+        onDelete={onDelete}
+        onSelect={() => {}}
+        onDoubleClick={onDoubleClick}
+      />
+    </div>
+  );
+}
+
+const SLOT_ID_PREFIX = "slot-";
+
 function SlotRow({
   slotIndex,
   date,
   dinner,
-  selectedDinnerId,
-  onSlotClick,
-  onSelectDinner,
   onDelete,
   onDoubleClick,
 }: {
   slotIndex: number;
   date: Date;
   dinner: Dinner | null;
-  selectedDinnerId: string | null;
-  onSlotClick: (slotIndex: number) => void;
-  onSelectDinner: (id: string) => void;
   onDelete: (id: string) => void;
   onDoubleClick: (id: string) => void;
 }) {
-  const hasDinner = dinner !== null;
+  const { isOver, setNodeRef } = useDroppable({
+    id: `${SLOT_ID_PREFIX}${slotIndex}`,
+    data: { slotIndex },
+  });
 
   return (
     <div className="flex items-stretch gap-3">
       <DayDateSquare date={date} />
       <div
-        className="flex-1 rounded transition-colors overflow-hidden shrink-0 h-[3.5rem] border-2 border-dashed border-gray-600 bg-gray-700/30 cursor-pointer hover:border-gray-500"
-        onClick={() => onSlotClick(slotIndex)}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onSlotClick(slotIndex);
-          }
-        }}
+        ref={setNodeRef}
+        className={`flex-1 rounded transition-colors overflow-hidden shrink-0 min-h-[3.5rem] border-2 border-dashed ${
+          isOver
+            ? "border-blue-500 bg-blue-900/20"
+            : "border-gray-600 bg-gray-700/30"
+        }`}
       >
         {dinner ? (
-          <div className="h-full min-h-0 p-1 overflow-hidden">
-            <DinnerCard
-              dinner={dinner}
-              isSelected={selectedDinnerId === dinner.id}
-              onDelete={onDelete}
-              onSelect={onSelectDinner}
-              onDoubleClick={onDoubleClick}
-            />
-          </div>
+          <DraggableDinnerCard
+            dinner={dinner}
+            fromSlotIndex={slotIndex}
+            onDelete={onDelete}
+            onDoubleClick={onDoubleClick}
+          />
         ) : (
-          <div className="flex items-center px-3 text-gray-500 text-sm h-full">
+          <div className="flex items-center px-3 text-gray-500 text-sm h-full min-h-[3.5rem]">
             Empty
           </div>
         )}
@@ -194,9 +242,14 @@ export default function DinnersWidget({
   const [addToDinnerDialogItem, setAddToDinnerDialogItem] =
     useState<RotationItem | null>(null);
   const [removeFromRotationId, setRemoveFromRotationId] = useState<string | null>(null);
-  const [selectedDinnerId, setSelectedDinnerId] = useState<string | null>(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
   const dates = useMemo(
     () => [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(today, i)),
     [today]
@@ -358,39 +411,43 @@ export default function DinnersWidget({
     });
   };
 
-  const handleSelectDinner = (id: string) => {
-    setSelectedDinnerId((prev) => (prev === id ? null : id));
-  };
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (over == null || typeof over.id !== "string") return;
+      const fromSlot = active.data.current?.fromSlotIndex as number | undefined;
+      if (typeof fromSlot !== "number" || fromSlot < 0) return;
 
-  const handleSlotClick = async (toSlot: number) => {
-    if (selectedDinnerId == null) return;
+      let toSlot: number;
+      if (over.id.startsWith(SLOT_ID_PREFIX)) {
+        toSlot = parseInt(over.id.slice(SLOT_ID_PREFIX.length), 10);
+      } else {
+        toSlot = slots.findIndex((s) => s?.id === over.id);
+      }
+      if (Number.isNaN(toSlot) || toSlot < 0) return;
+      if (fromSlot === toSlot) return;
 
-    const fromSlot = slots.findIndex((s) => s?.id === selectedDinnerId);
-    if (fromSlot < 0) return;
+      const movedDinner = slots[fromSlot] ?? null;
+      if (!movedDinner) return;
+      const occupant = slots[toSlot] ?? null;
 
-    if (fromSlot === toSlot) {
-      setSelectedDinnerId(null);
-      return;
-    }
+      const updates: { id: string; date: string }[] = [
+        { id: movedDinner.id, date: format(dates[toSlot], "yyyy-MM-dd") },
+      ];
+      if (occupant) {
+        updates.push({
+          id: occupant.id,
+          date: format(dates[fromSlot], "yyyy-MM-dd"),
+        });
+      }
 
-    const movedDinner = slots[fromSlot]!;
-    const occupant = slots[toSlot] ?? null;
-    const updates: { id: string; date: string }[] = [
-      { id: movedDinner.id, date: format(dates[toSlot], "yyyy-MM-dd") },
-    ];
-    if (occupant) {
-      updates.push({
-        id: occupant.id,
-        date: format(dates[fromSlot], "yyyy-MM-dd"),
-      });
-    }
-
-    for (const { id, date } of updates) {
-      await updateMutation.mutateAsync({ id, data: { date } });
-    }
-    queryClient.invalidateQueries({ queryKey: ["dinners"] });
-    setSelectedDinnerId(null);
-  };
+      for (const { id, date } of updates) {
+        await updateMutation.mutateAsync({ id, data: { date } });
+      }
+      queryClient.invalidateQueries({ queryKey: ["dinners"] });
+    },
+    [slots, dates, updateMutation, queryClient]
+  );
 
   const handleDoubleClick = (id: string) => {
     const d = dinners.find((x) => x.id === id);
@@ -668,30 +725,26 @@ export default function DinnersWidget({
         </div>
       )}
 
-      {selectedDinnerId && (
-        <p className="text-sm text-blue-400">
-          Click a day to move or swap. Click the selected meal again to cancel.
-        </p>
-      )}
-
       {isLoading ? (
         <div className="text-gray-400">Loading...</div>
       ) : (
-        <div className="space-y-3">
-          {dates.map((date, i) => (
-            <SlotRow
-              key={format(date, "yyyy-MM-dd")}
-              slotIndex={i}
-              date={date}
-              dinner={slots[i] ?? null}
-              selectedDinnerId={selectedDinnerId}
-              onSlotClick={handleSlotClick}
-              onSelectDinner={handleSelectDinner}
-              onDelete={(id) => deleteMutation.mutate(id)}
-              onDoubleClick={handleDoubleClick}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="space-y-3">
+            {dates.map((date, i) => (
+              <SlotRow
+                key={format(date, "yyyy-MM-dd")}
+                slotIndex={i}
+                date={date}
+                dinner={slots[i] ?? null}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onDoubleClick={handleDoubleClick}
+              />
+            ))}
+          </div>
+        </DndContext>
       )}
 
       <button
