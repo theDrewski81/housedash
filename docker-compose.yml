@@ -55,7 +55,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       
-      # Google Calendar API
+      # Google Calendar (public calendar ID + API key)
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID}
       GOOGLE_CALENDAR_API_KEY: ${GOOGLE_CALENDAR_API_KEY}
       
       # OpenWeather API

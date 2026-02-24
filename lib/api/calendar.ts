@@ -21,28 +21,12 @@ export interface ScheduleData {
   }>;
 }
 
-export interface GetCalendarEventsOptions {
-  /** OAuth access token for user's calendar (required for "primary") */
-  accessToken?: string;
-}
-
 export async function getCalendarEvents(
-  calendarId: string = "primary",
-  options: GetCalendarEventsOptions = {}
+  calendarId: string
 ): Promise<ScheduleData> {
-  const { accessToken } = options;
   const apiKey = process.env.GOOGLE_CALENDAR_API_KEY;
-
-  if (accessToken) {
-    // OAuth: use Bearer token (works for "primary" and user calendars)
-  } else if (apiKey && calendarId !== "primary") {
-    // API key: works only for public calendars (not "primary")
-  } else {
-    throw new Error(
-      calendarId === "primary"
-        ? "Sign in with Google to view your calendar, or set GOOGLE_CALENDAR_API_KEY and use a public calendar ID"
-        : "GOOGLE_CALENDAR_API_KEY is not set"
-    );
+  if (!apiKey) {
+    throw new Error("GOOGLE_CALENDAR_API_KEY is not set");
   }
 
   const now = new Date();
@@ -57,24 +41,19 @@ export async function getCalendarEvents(
     timeMax,
     singleEvents: "true",
     orderBy: "startTime",
+    key: apiKey,
   });
-  if (apiKey && !accessToken) {
-    params.set("key", apiKey);
-  }
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
-  const headers: HeadersInit = accessToken
-    ? { Authorization: `Bearer ${accessToken}` }
-    : {};
+  const headers: HeadersInit = {};
 
   const response = await fetch(url, { headers });
   const data = await response.json();
 
   if (!response.ok) {
     const msg =
-      response.status === 401
-        ? "Calendar access expired. Sign out and sign in again with Google."
-        : (data?.error?.message as string) || "Failed to fetch calendar events";
+      (data?.error?.message as string) ||
+      "Failed to fetch calendar events. Ensure GOOGLE_CALENDAR_ID is a public calendar and GOOGLE_CALENDAR_API_KEY is valid.";
     throw new Error(msg);
   }
 
