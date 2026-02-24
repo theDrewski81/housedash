@@ -6,13 +6,10 @@ import { join } from "path";
 const handler = NextAuth(authOptions);
 
 function debugLog(data: Record<string, unknown>) {
+  const payload = { sessionId: "c2dc8b", timestamp: Date.now(), ...data };
+  const line = JSON.stringify(payload) + "\n";
+  console.error("[AUTH_DEBUG]", line);
   try {
-    const line =
-      JSON.stringify({
-        sessionId: "c2dc8b",
-        timestamp: Date.now(),
-        ...data,
-      }) + "\n";
     appendFileSync(join(process.cwd(), "debug-c2dc8b.log"), line);
   } catch {
     /* ignore */
@@ -25,18 +22,19 @@ async function wrappedHandler(
 ) {
   const url = req.url;
   const u = new URL(url);
-  if (u.pathname.includes("callback") && u.pathname.includes("google")) {
-    debugLog({
-      location: "route.ts:callback",
-      message: "OAuth callback received",
-      data: {
-        error: u.searchParams.get("error"),
-        error_description: u.searchParams.get("error_description"),
-        hasCode: !!u.searchParams.get("code"),
-        fullPath: u.pathname + u.search,
-      },
-    });
-  }
+  const pathname = u.pathname;
+  const params = await ctx.params;
+  debugLog({
+    location: "route.ts:all",
+    message: "Auth request",
+    data: {
+      method: req.method,
+      pathname,
+      nextauthSegments: params?.nextauth,
+      hasError: !!u.searchParams.get("error"),
+      error: u.searchParams.get("error"),
+    },
+  });
   return handler(req, ctx);
 }
 
