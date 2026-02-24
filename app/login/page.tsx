@@ -53,7 +53,23 @@ function LoginContent() {
             </p>
           )}
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={() => {
+              // #region agent log
+              fetch("http://127.0.0.1:7265/ingest/82f6d7d4-f037-4325-a8e4-76202ca019d4", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c2dc8b" },
+                body: JSON.stringify({
+                  sessionId: "c2dc8b",
+                  location: "login/page.tsx:signIn",
+                  message: "Google sign-in initiated",
+                  data: {},
+                  timestamp: Date.now(),
+                  hypothesisId: "H5",
+                }),
+              }).catch(() => {});
+              // #endregion
+              signIn("google", { callbackUrl: "/dashboard" });
+            }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
             Sign in with Google

@@ -173,6 +173,30 @@ export const authOptions = {
   session: {
     strategy: "database",
   },
+  events: {
+    // #region agent log
+    error({ error }) {
+      fetch("http://127.0.0.1:7265/ingest/82f6d7d4-f037-4325-a8e4-76202ca019d4", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Debug-Session-Id": "c2dc8b",
+        },
+        body: JSON.stringify({
+          sessionId: "c2dc8b",
+          location: "auth.ts:events.error",
+          message: "NextAuth error event",
+          data: {
+            errorMessage: error?.message,
+            errorName: error?.name,
+          },
+          timestamp: Date.now(),
+          hypothesisId: "H3",
+        }),
+      }).catch(() => {});
+    },
+    // #endregion
+  },
 } as NextAuthOptions;
 
 export { ACCOUNT_CREATION_DISABLED_ERROR };
