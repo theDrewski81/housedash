@@ -26,8 +26,12 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
     try {
       setLoading(true);
       const response = await fetch("/api/widgets/schedule");
-      if (!response.ok) throw new Error("Failed to fetch schedule");
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          (data?.error as string) || "Failed to fetch schedule"
+        );
+      }
       setSchedule(data);
       setError(null);
     } catch (err) {

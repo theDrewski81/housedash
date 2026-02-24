@@ -3,6 +3,18 @@ import { authOptions } from "./auth";
 import { prisma } from "./db/prisma";
 import type { User } from "@prisma/client";
 
+/** Returns Google OAuth access_token for the current user, or null if not signed in with Google. */
+export async function getGoogleAccessToken(): Promise<string | null> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return null;
+
+  const account = await prisma.account.findFirst({
+    where: { userId: session.user.id, provider: "google" },
+    select: { access_token: true },
+  });
+  return account?.access_token ?? null;
+}
+
 export async function getCurrentUser(): Promise<(User & { role: User["role"]; status: User["status"] }) | null> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
