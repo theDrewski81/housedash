@@ -45,7 +45,10 @@ export async function getCalendarEvents(
   });
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
-  const headers: HeadersInit = {};
+  const baseUrl = process.env.NEXTAUTH_URL || "https://dash.susknet.com";
+  const headers: HeadersInit = {
+    Referer: `${baseUrl}/`,
+  };
 
   const response = await fetch(url, { headers });
   const data = await response.json();
