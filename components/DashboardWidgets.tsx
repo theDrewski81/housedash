@@ -21,10 +21,11 @@ const WIDGETS = [
 const SWIPE_THRESHOLD_PX = 50;
 
 const DINNERS_WIDGET_INDEX = 3;
+const PROJECTS_WIDGET_INDEX = 5;
 
 export default function DashboardWidgets() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-  const [expandToView, setExpandToView] = useState<"rotation" | null>(null);
+  const [expandToView, setExpandToView] = useState<"rotation" | "completions" | null>(null);
   const touchStartX = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -100,16 +101,30 @@ export default function DashboardWidgets() {
         {/* Expanded view: fills full content area below header; horizontal padding so Prev/Next buttons do not overlap content */}
         <div className="flex min-h-0 flex-1 flex-col py-4 md:py-0 md:px-14">
           <div className="min-h-0 flex-1 overflow-auto">
-            <CurrentWidget
-              isExpanded={true}
-              onExpandToggle={() => setExpandedIndex(null)}
-              expandToView={expandedIndex === DINNERS_WIDGET_INDEX ? expandToView : undefined}
-              clearExpandToView={
-                expandedIndex === DINNERS_WIDGET_INDEX
-                  ? () => setExpandToView(null)
-                  : undefined
-              }
-            />
+            {expandedIndex === DINNERS_WIDGET_INDEX ? (
+              <DinnersWidget
+                isExpanded={true}
+                onExpandToggle={() => setExpandedIndex(null)}
+                expandToView={
+                  expandToView === "rotation" ? "rotation" : undefined
+                }
+                clearExpandToView={() => setExpandToView(null)}
+              />
+            ) : expandedIndex === PROJECTS_WIDGET_INDEX ? (
+              <ProjectsWidget
+                isExpanded={true}
+                onExpandToggle={() => setExpandedIndex(null)}
+                expandToView={
+                  expandToView === "completions" ? "completions" : undefined
+                }
+                clearExpandToView={() => setExpandToView(null)}
+              />
+            ) : (
+              <CurrentWidget
+                isExpanded={true}
+                onExpandToggle={() => setExpandedIndex(null)}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -131,6 +146,14 @@ export default function DashboardWidgets() {
               ? () => {
                   setExpandToView("rotation");
                   setExpandedIndex(DINNERS_WIDGET_INDEX);
+                }
+              : undefined
+          }
+        onExpandToCompletions={
+            WidgetComponent === ProjectsWidget
+              ? () => {
+                  setExpandToView("completions");
+                  setExpandedIndex(PROJECTS_WIDGET_INDEX);
                 }
               : undefined
           }

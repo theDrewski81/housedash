@@ -6,6 +6,8 @@ import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 type CalendarConfig = { id: string; color?: string };
 
+type ProjectColumnConfig = { id: string; label: string; color: string };
+
 type SettingsResponse = {
   allowAccountCreation?: boolean;
   auditUserCrud?: boolean;
@@ -29,6 +31,13 @@ const DEFAULT_CALENDAR_COLORS = [
   "#EC4899",
 ];
 
+const DEFAULT_PROJECT_COLUMNS: ProjectColumnConfig[] = [
+  { id: "NOT_READY", label: "Not Ready", color: "" },
+  { id: "STARTING", label: "Starting", color: "#93c5fd" },
+  { id: "IN_PROGRESS", label: "In Progress", color: "#60a5fa" },
+  { id: "COMPLETE", label: "Complete", color: "#3b82f6" },
+];
+
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,14 +51,18 @@ export default function AdminSettingsPage() {
     useState<boolean>(true);
   const [calendarConfigs, setCalendarConfigs] = useState<CalendarConfig[]>([]);
   const [newCalendarId, setNewCalendarId] = useState("");
+  const [projectsColumns, setProjectsColumns] =
+    useState<ProjectColumnConfig[]>(DEFAULT_PROJECT_COLUMNS);
+  const [savingProjects, setSavingProjects] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [settingsRes, schemaRes] = await Promise.all([
+      const [settingsRes, schemaRes, prefsRes] = await Promise.all([
         fetch("/api/admin/settings"),
         fetch("/api/admin/settings/schema-status"),
+        fetch("/api/user/preferences"),
       ]);
       if (!settingsRes.ok) throw new Error("Failed to load settings");
       const data: SettingsResponse = await settingsRes.json();
@@ -69,6 +82,21 @@ export default function AdminSettingsPage() {
         setCalendarConfigsSupported(
           schemaData.calendarConfigsSupported !== false
         );
+      }
+      if (prefsRes.ok) {
+        const prefs = (await prefsRes.json()) as {
+          projectsConfig?: { columns?: ProjectColumnConfig[] };
+        };
+        const cols = prefs.projectsConfig?.columns;
+        if (Array.isArray(cols) && cols.length > 0) {
+          setProjectsColumns(
+            cols.map((c) => ({
+              id: typeof c.id === "string" ? c.id : "",
+              label: typeof c.label === "string" ? c.label : c.id ?? "",
+              color: typeof c.color === "string" ? c.color : "",
+            }))
+          );
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load settings");
@@ -132,6 +160,45 @@ export default function AdminSettingsPage() {
     setCalendarConfigs(
       calendarConfigs.map((c, i) => (i === index ? { ...c, color } : c))
     );
+  };
+
+  const handleProjectsColumnChange = (
+    index: number,
+    field: "label" | "color",
+    value: string
+  ) => {
+    setProjectsColumns(
+      projectsColumns.map((c, i) =>
+        i === index ? { ...c, [field]: value } : c
+      )
+    );
+  };
+
+  const handleSaveProjects = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProjects(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectsConfig: { columns: projectsColumns },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          data.error ?? "Failed to update Projects settings"
+        );
+      }
+      setSuccess(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save Projects");
+    } finally {
+      setSavingProjects(false);
+    }
   };
 
   const handleSaveCalendars = async (e: React.FormEvent) => {
@@ -306,6 +373,63 @@ export default function AdminSettingsPage() {
                   className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingCalendars ? "Saving..." : "Save calendars"}
+                </button>
+              </form>
+            </section>
+
+            <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <h2 className="text-lg font-semibold text-white mb-4">
+                Projects
+              </h2>
+              <p className="text-gray-400 text-sm mb-4">
+                Customize the Projects widget kanban columns. Edit each column
+                label and color. Changes apply to your Projects widget.
+              </p>
+              <form onSubmit={handleSaveProjects} className="space-y-4">
+                <div className="space-y-3">
+                  {projectsColumns.map((col, index) => (
+                    <div
+                      key={col.id}
+                      className="flex items-center gap-3 rounded border border-gray-600 bg-gray-700/50 p-3"
+                    >
+                      <input
+                        type="color"
+                        value={col.color || "#93c5fd"}
+                        onChange={(e) =>
+                          handleProjectsColumnChange(
+                            index,
+                            "color",
+                            e.target.value
+                          )
+                        }
+                        className="h-9 w-9 cursor-pointer rounded border border-gray-600 bg-transparent p-0"
+                        title="Column color"
+                      />
+                      <input
+                        type="text"
+                        value={col.label}
+                        onChange={(e) =>
+                          handleProjectsColumnChange(
+                            index,
+                            "label",
+                            e.target.value
+                          )
+                        }
+                        className="flex-1 rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white"
+                        placeholder="Column label"
+                      />
+                      <span className="text-xs text-gray-500 shrink-0">
+                        {col.id}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingProjects}
+                  className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingProjects ? "Saving..." : "Save Projects"}
                 </button>
               </form>
             </section>

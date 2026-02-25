@@ -44,6 +44,7 @@ model User {
   groceries       Grocery[]
   budgetIncomes   BudgetIncome[]
   budgetExpenses  BudgetExpense[]
+  projectTodos    ProjectTodo[]
   preferences     UserPreferences?
   auditLogsDone   AdminAuditLog[] @relation("AdminAuditLogAdmin")
 
@@ -119,15 +120,39 @@ model VerificationToken {
 }
 
 model UserPreferences {
-  id        String   @id @default(cuid())
-  userId    String   @unique @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  colors    Json?    // Custom color scheme
-  background String? // Custom background
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  colors         Json?    // Custom color scheme
+  background    String?  // Custom background
+  projectsConfig Json?   @map("projects_config") // { columns: [{ id, label, color }] }
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("user_preferences")
+}
+
+enum ProjectTodoStatus {
+  NOT_READY
+  STARTING
+  IN_PROGRESS
+  COMPLETE
+}
+
+model ProjectTodo {
+  id              String            @id @default(cuid())
+  userId          String            @map("user_id")
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  priority        Int               // 1, 2, or 3
+  initialPriority Int?              @map("initial_priority") // Set when created; used for completion analytics
+  status          ProjectTodoStatus @default(NOT_READY)
+  completedAt     DateTime?         @map("completed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("project_todos")
 }
 
 model Dinner {
