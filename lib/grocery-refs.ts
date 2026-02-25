@@ -167,6 +167,8 @@ export function stripItemModifiers(name: string): string {
     .trim();
   // Strip leading numbers (handles bad data like "2 garlic clove")
   beforeComma = beforeComma.replace(/^\d+(?:\.\d+)?\s+/, "");
+  // Strip leading "optional:" prefix
+  beforeComma = beforeComma.replace(/^optional:\s*/i, "").trim();
 
   // Strip leading modifiers (e.g. "whipped cream cheese" → "cream cheese")
   const sortedMods = [...ITEM_MODIFIERS].sort((a, b) => b.length - a.length);
@@ -179,6 +181,52 @@ export function stripItemModifiers(name: string): string {
   }
 
   return result || beforeComma;
+}
+
+/**
+ * Infers a grocery category from item name (normalized, lowercase).
+ * Returns category string; defaults to "Other" if no match.
+ */
+export function inferCategory(itemName: string): string {
+  const name = itemName.toLowerCase().trim();
+  if (!name) return "Other";
+
+  const CATEGORY_KEYWORDS: Record<string, string[]> = {
+    Produce: [
+      "garlic", "onion", "tomato", "potato", "carrot", "celery", "lettuce",
+      "spinach", "broccoli", "pepper", "lemon", "lime", "apple", "banana",
+      "avocado", "ginger", "herb", "basil", "cilantro", "parsley", "mint",
+    ],
+    Dairy: [
+      "milk", "cream", "cheese", "butter", "yogurt", "sour cream",
+    ],
+    Meat: [
+      "chicken", "beef", "pork", "bacon", "sausage", "turkey", "fish",
+      "salmon", "shrimp", "ground beef", "ground turkey",
+    ],
+    Bakery: [
+      "bread", "breadcrumb", "flour", "tortilla", "pita", "bagel",
+    ],
+    Pantry: [
+      "oil", "vinegar", "soy sauce", "sauce", "broth", "stock", "rice",
+      "pasta", "noodle", "bean", "lentil", "canned", "tomato paste",
+      "sugar", "honey", "maple syrup", "peanut butter", "jam",
+      "cereal", "oat", "nut", "almond", "walnut",
+    ],
+    Spices: [
+      "salt", "pepper", "paprika", "cumin", "oregano", "thyme", "cinnamon",
+      "nutmeg", "vanilla", "chili", "curry", "garam masala", "bay leaf",
+      "red pepper flake", "pepper flake",
+    ],
+    Frozen: [
+      "frozen", "ice cream",
+    ],
+  };
+
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((kw) => name.includes(kw))) return category;
+  }
+  return "Other";
 }
 
 export function convertToSalableUnit(

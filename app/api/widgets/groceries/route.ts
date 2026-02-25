@@ -6,6 +6,7 @@ import {
   chooseItemName,
   mergeQuantity,
 } from "@/lib/grocery-dedupe";
+import { inferCategory } from "@/lib/grocery-refs";
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,7 +39,9 @@ export async function POST(request: NextRequest) {
     const user = await requireAuth();
     const body = await request.json();
     const itemName = (body.itemName ?? "").trim();
-    const category = body.category || "Other";
+    const requestedCategory = body.category || "Other";
+    const category =
+      requestedCategory === "Other" ? inferCategory(itemName) : requestedCategory;
     const quantity = body.quantity?.trim() || null;
 
     if (!itemName) {

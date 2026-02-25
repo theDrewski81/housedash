@@ -9,8 +9,8 @@ export function parseIngredientLine(line: string): {
   item: string;
   quantity: string | null;
 } {
-  // Strip leading list bullets: "- ", "• ", "* "
-  const trimmed = line.trim().replace(/^[-•*]\s+/, "");
+  // Strip leading list bullets: "- ", "– ", "— ", "• ", "* " (hyphen, en-dash, em-dash)
+  const trimmed = line.trim().replace(/^[-–—•*]\s+/, "");
   if (!trimmed) {
     return { item: "", quantity: null };
   }
