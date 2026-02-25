@@ -15,6 +15,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { parseIngredientsText } from "@/lib/parse-ingredient";
 
 interface Dinner {
   id: string;
@@ -383,6 +384,28 @@ export default function DinnersWidget({
     },
   });
 
+  const sendToGroceriesMutation = useMutation({
+    mutationFn: async (ingredientsText: string) => {
+      const parsed = parseIngredientsText(ingredientsText);
+      if (parsed.length === 0) throw new Error("No ingredients to add");
+      for (const p of parsed) {
+        const res = await fetch("/api/widgets/groceries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemName: p.item,
+            category: "Other",
+            quantity: p.quantity,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to add to groceries");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groceries"] });
+    },
+  });
+
   const getNextAvailableDate = (): string => {
     const firstEmpty = slots.findIndex((s) => s === null);
     const idx = firstEmpty >= 0 ? firstEmpty : dates.length - 1;
@@ -584,6 +607,16 @@ export default function DinnersWidget({
             className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
           >
             Add to Rotation
+          </button>
+          <button
+            type="button"
+            onClick={() => sendToGroceriesMutation.mutate(editForm.ingredients)}
+            disabled={
+              !editForm.ingredients.trim() || sendToGroceriesMutation.isPending
+            }
+            className="rounded bg-amber-600 px-3 py-2 text-sm hover:bg-amber-700 disabled:opacity-50"
+          >
+            Send to Groceries
           </button>
           <button
             type="button"
