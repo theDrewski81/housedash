@@ -51,36 +51,61 @@ export function chooseItemName(existing: string, added: string): string {
 const UNIT_PATTERN =
   "cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|ounce|ounces|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces";
 
+type QuantityPart =
+  | { kind: "single"; value: number; unit: string }
+  | { kind: "range"; min: number; max: number; unit: string };
+
+function parseNum(s: string): number {
+  if (s.includes("/")) {
+    const [n, d] = s.split("/").map(Number);
+    return d ? n / d : n;
+  }
+  return parseFloat(s);
+}
+
 /**
- * Parses a single quantity part like "1.5 cup" or "8 ounce" into { value, unit }.
+ * Parses a single quantity part: "1.5 cup", "8 ounce", "1-2 cloves", "0.5 – 0.75 tsp".
  */
-function parseQuantityPart(q: string): { value: number; unit: string } | null {
+function parseQuantityPart(q: string): QuantityPart | null {
   const normalized = parseUnicodeFraction(q.trim());
   if (!normalized) return null;
+
+  // Range: "1-2", "0.5 – 0.75 tsp"
+  const rangeMatch = normalized.match(
+    new RegExp(
+      `^(\\d+(?:\\.\\d+)?(?:\\/\\d+)?)\\s*[-–]\\s*(\\d+(?:\\.\\d+)?(?:\\/\\d+)?)\\s*(${UNIT_PATTERN})?\\s*$`,
+      "i"
+    )
+  );
+  if (rangeMatch) {
+    const min = parseNum(rangeMatch[1]);
+    const max = parseNum(rangeMatch[2]);
+    if (!Number.isNaN(min) && !Number.isNaN(max))
+      return {
+        kind: "range",
+        min,
+        max,
+        unit: normalizeUnit(rangeMatch[3] ?? ""),
+      };
+  }
+
+  // Single value
   const match = normalized.match(
     new RegExp(`^(\\d+(?:\\.\\d+)?(?:\\/\\d+)?)\\s*(${UNIT_PATTERN})?\\s*$`, "i")
   );
   if (!match) return null;
-  let value: number;
-  const numStr = match[1];
-  if (numStr.includes("/")) {
-    const [n, d] = numStr.split("/").map(Number);
-    value = d ? n / d : n;
-  } else {
-    value = parseFloat(numStr);
-  }
+  const value = parseNum(match[1]);
   if (Number.isNaN(value)) return null;
-  const unit = normalizeUnit(match[2] ?? "");
-  return { value, unit };
+  return {
+    kind: "single",
+    value,
+    unit: normalizeUnit(match[2] ?? ""),
+  };
 }
 
-/**
- * Parses a quantity string that may contain multiple parts separated by " + ".
- * Returns array of { value, unit }.
- */
-function parseQuantityParts(q: string): Array<{ value: number; unit: string }> {
+function parseQuantityParts(q: string): QuantityPart[] {
   const parts = q.split(/\s*\+\s*/).map((p) => parseQuantityPart(p.trim()));
-  return parts.filter((p): p is { value: number; unit: string } => p !== null);
+  return parts.filter((p): p is QuantityPart => p !== null);
 }
 
 /**
@@ -101,38 +126,103 @@ export function mergeQuantity(
     return `${existing} + ${added}`.trim();
   }
 
-  // Collect all parts and convert to salable units
-  const volumeByFlOz: number[] = [];
-  const weightByOz: number[] = [];
-  const other: Array<{ value: number; unit: string }> = [];
+  const allParts = [...existingParts, ...addedParts];
 
-  for (const p of [...existingParts, ...addedParts]) {
-    const salable = convertToSalableUnit(p.value, p.unit);
-    if (salable) {
-      if (salable.unit === "fl oz") volumeByFlOz.push(salable.value);
-      else if (salable.unit === "oz") weightByOz.push(salable.value);
-      else other.push(salable);
+  // Collect by unit: volume (fl oz), weight (oz), other. Track ranges and singles.
+  const volumeRanges: { min: number; max: number }[] = [];
+  const volumeSingles: number[] = [];
+  const weightRanges: { min: number; max: number }[] = [];
+  const weightSingles: number[] = [];
+  const rangesByUnit = new Map<string, { min: number; max: number }[]>();
+  const singlesByUnit = new Map<string, number[]>();
+
+  for (const p of allParts) {
+    if (p.kind === "range") {
+      const salableMin = convertToSalableUnit(p.min, p.unit);
+      const salableMax = convertToSalableUnit(p.max, p.unit);
+      if (salableMin && salableMax && salableMin.unit === salableMax.unit) {
+        if (salableMin.unit === "fl oz") {
+          volumeRanges.push({ min: salableMin.value, max: salableMax.value });
+        } else if (salableMin.unit === "oz") {
+          weightRanges.push({ min: salableMin.value, max: salableMax.value });
+        } else {
+          const key = salableMin.unit || "count";
+          const arr = rangesByUnit.get(key) ?? [];
+          arr.push({ min: salableMin.value, max: salableMax.value });
+          rangesByUnit.set(key, arr);
+        }
+      } else {
+        const key = p.unit || "count";
+        const arr = rangesByUnit.get(key) ?? [];
+        arr.push({ min: p.min, max: p.max });
+        rangesByUnit.set(key, arr);
+      }
     } else {
-      other.push(p);
+      const salable = convertToSalableUnit(p.value, p.unit);
+      if (salable) {
+        if (salable.unit === "fl oz") volumeSingles.push(salable.value);
+        else if (salable.unit === "oz") weightSingles.push(salable.value);
+        else {
+          const key = salable.unit || "count";
+          const arr = singlesByUnit.get(key) ?? [];
+          arr.push(salable.value);
+          singlesByUnit.set(key, arr);
+        }
+      } else {
+        const key = p.unit || "count";
+        const arr = singlesByUnit.get(key) ?? [];
+        arr.push(p.value);
+        singlesByUnit.set(key, arr);
+      }
     }
   }
 
   const result: string[] = [];
-  if (volumeByFlOz.length > 0) {
-    const sum = volumeByFlOz.reduce((a, b) => a + b, 0);
-    result.push(`${Math.round(sum * 10) / 10} fl oz`);
+
+  const addToResult = (
+    ranges: { min: number; max: number }[],
+    singles: number[],
+    unit: string
+  ) => {
+    const add = singles.reduce((a, b) => a + b, 0);
+    const totalMin = ranges.reduce((a, r) => a + r.min, 0) + add;
+    const totalMax = ranges.reduce((a, r) => a + r.max, 0) + add;
+    const unitStr = unit ? ` ${unit}` : "";
+    if (totalMin === totalMax) {
+      result.push(`${Math.round(totalMin * 10) / 10}${unitStr}`.trim());
+    } else {
+      result.push(
+        `${Math.round(totalMin * 10) / 10}-${Math.round(totalMax * 10) / 10}${unitStr}`.trim()
+      );
+    }
+  };
+
+  if (volumeRanges.length > 0 || volumeSingles.length > 0) {
+    addToResult(volumeRanges, volumeSingles, "fl oz");
   }
-  if (weightByOz.length > 0) {
-    const sum = weightByOz.reduce((a, b) => a + b, 0);
-    result.push(`${Math.round(sum * 10) / 10} oz`);
+  if (weightRanges.length > 0 || weightSingles.length > 0) {
+    addToResult(weightRanges, weightSingles, "oz");
   }
-  // Non-convertible units: sum same units, else keep as-is
-  const otherByUnit = new Map<string, number>();
-  for (const p of other) {
-    const key = p.unit || "count";
-    otherByUnit.set(key, (otherByUnit.get(key) ?? 0) + p.value);
+
+  // Merge ranges + singles by unit
+  for (const [unit, ranges] of rangesByUnit) {
+    const singles = singlesByUnit.get(unit) ?? [];
+    const add = singles.reduce((a, b) => a + b, 0);
+    const totalMin = ranges.reduce((a, r) => a + r.min, 0) + add;
+    const totalMax = ranges.reduce((a, r) => a + r.max, 0) + add;
+    const unitStr = unit ? ` ${unit}` : "";
+    if (totalMin === totalMax) {
+      result.push(`${Math.round(totalMin * 10) / 10}${unitStr}`.trim());
+    } else {
+      result.push(
+        `${Math.round(totalMin * 10) / 10}-${Math.round(totalMax * 10) / 10}${unitStr}`.trim()
+      );
+    }
+    singlesByUnit.delete(unit);
   }
-  for (const [unit, sum] of otherByUnit) {
+
+  for (const [unit, vals] of singlesByUnit) {
+    const sum = vals.reduce((a, b) => a + b, 0);
     result.push(unit ? `${Math.round(sum * 10) / 10} ${unit}` : String(sum));
   }
 

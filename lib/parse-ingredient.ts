@@ -18,9 +18,9 @@ export function parseIngredientLine(line: string): {
   // Normalize unicode fractions (½→0.5) for quantity parsing
   const normalized = parseUnicodeFraction(trimmed);
 
-  // Alternate pattern: "N item unit" e.g. "2 garlic clove", "3 chicken breasts"
+  // Alternate pattern: "N item unit" or "N-M item unit" e.g. "2 garlic clove", "1-2 garlic cloves"
   const endUnitMatch = normalized.match(
-    /^(\d+(?:\.\d+)?)\s+(.+?)\s+(clove|cloves|piece|pieces|slice|slices)\s*$/i
+    /^(\d+(?:\.\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?)?)\s+(.+?)\s+(clove|cloves|piece|pieces|slice|slices)\s*$/i
   );
   if (endUnitMatch) {
     const [, numPart, itemPart, unit] = endUnitMatch;
@@ -29,9 +29,9 @@ export function parseIngredientLine(line: string): {
     return { item, quantity };
   }
 
-  // Match optional leading quantity: number (including fractions like 1/2, ½) + optional unit
+  // Match optional leading quantity: number or range (1-2, 0.5 – 0.75) + optional unit
   const quantityMatch = normalized.match(
-    /^(\d+(?:\.\d+)?(?:\/\d+)?(?:\s*-\s*\d+(?:\.\d+)?(?:\/\d+)?)?)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|ounce|ounces|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces)?\s+(.+)$/i
+    /^(\d+(?:\.\d+)?(?:\/\d+)?(?:\s*[-–]\s*\d+(?:\.\d+)?(?:\/\d+)?)?)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|ounce|ounces|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces)?\s+(.+)$/i
   );
 
   if (quantityMatch) {
