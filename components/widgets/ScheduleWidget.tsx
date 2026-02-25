@@ -101,10 +101,10 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
 
     if (!hasEventsToday) {
       return (
-        <div className="space-y-2">
-          <div className="text-gray-400">No events today</div>
+        <div className="flex flex-col min-h-[140px]">
+          <div className="text-gray-400 flex-shrink-0">No events today</div>
           {schedule.nextEvent && (
-            <div>
+            <div className="flex-1 flex flex-col justify-end">
               <div className="font-semibold text-sm text-gray-300 mb-1">
                 Upcoming
               </div>
@@ -127,25 +127,31 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
       : activeOrRemaining.slice(0, maxListLines);
 
     return (
-      <div className="space-y-2">
-        {allDayToday.map((e) => (
-          <div key={e.id} className="font-medium text-sm">
-            {e.summary}
-          </div>
-        ))}
-        <ul className="list-none space-y-1 text-sm">
-          {displayList.map((e) => (
-            <li key={e.id}>
-              <span className="font-medium">{e.summary}</span>
-              <span className="text-gray-400 ml-1">
-                {formatEventTimeRange(e)}
-              </span>
-            </li>
+      <div className="flex flex-col min-h-[140px]">
+        <div className="flex-shrink-0">
+          {allDayToday.map((e) => (
+            <div key={e.id} className="font-medium text-sm">
+              {e.summary}
+            </div>
           ))}
-          {overflowCount > 0 && (
-            <li className="text-gray-400">Plus {overflowCount} more events</li>
-          )}
-        </ul>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <ul className="list-none space-y-2 text-center w-full">
+            {displayList.map((e) => (
+              <li key={e.id} className="text-left">
+                <div className="font-semibold text-base">{e.summary}</div>
+                <div className="text-sm text-gray-400">
+                  {formatEventTimeRange(e)}
+                </div>
+              </li>
+            ))}
+            {overflowCount > 0 && (
+              <li className="text-gray-400 text-sm">
+                Plus {overflowCount} more events
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
     );
   })();
