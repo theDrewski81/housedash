@@ -4,7 +4,11 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import Widget from "@/components/ui/Widget";
 import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import {
+  TrashIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import {
   DndContext,
   type DragEndEvent,
@@ -472,18 +476,54 @@ export default function DinnersWidget({
     [slots, dates, updateMutation, queryClient]
   );
 
+  const loadDinnerIntoEditForm = (d: Dinner) => {
+    setEditingId(d.id);
+    setEditForm({
+      mealName: d.mealName,
+      description: d.description ?? "",
+      url: d.url ?? "",
+      ingredients: d.ingredients ?? "",
+    });
+    setView("edit");
+  };
+
   const handleDoubleClick = (id: string) => {
     const d = dinners.find((x) => x.id === id);
-    if (d) {
-      setEditingId(id);
-      setEditForm({
-        mealName: d.mealName,
-        description: d.description ?? "",
-        url: d.url ?? "",
-        ingredients: d.ingredients ?? "",
-      });
-      setView("edit");
-    }
+    if (d) loadDinnerIntoEditForm(d);
+  };
+
+  const currentSlotIndex = editingId
+    ? slots.findIndex((s) => s?.id === editingId)
+    : -1;
+  const prevSlotIndex =
+    currentSlotIndex > 0
+      ? (() => {
+          for (let i = currentSlotIndex - 1; i >= 0; i--) {
+            if (slots[i] !== null) return i;
+          }
+          return -1;
+        })()
+      : -1;
+  const nextSlotIndex =
+    currentSlotIndex >= 0 && currentSlotIndex < slots.length - 1
+      ? (() => {
+          for (let i = currentSlotIndex + 1; i < slots.length; i++) {
+            if (slots[i] !== null) return i;
+          }
+          return -1;
+        })()
+      : -1;
+
+  const handlePrevDinner = () => {
+    if (prevSlotIndex < 0) return;
+    const d = slots[prevSlotIndex];
+    if (d) loadDinnerIntoEditForm(d);
+  };
+
+  const handleNextDinner = () => {
+    if (nextSlotIndex < 0) return;
+    const d = slots[nextSlotIndex];
+    if (d) loadDinnerIntoEditForm(d);
   };
 
   const handleSaveEdit = () => {
@@ -545,7 +585,29 @@ export default function DinnersWidget({
 
   const editViewContent = editingId && (
     <div className="space-y-4">
-      <h3 className="font-semibold">Edit dinner</h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold">Edit dinner</h3>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={handlePrevDinner}
+            disabled={prevSlotIndex < 0}
+            className="rounded p-1.5 text-gray-400 hover:bg-gray-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label="Previous dinner"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleNextDinner}
+            disabled={nextSlotIndex < 0}
+            className="rounded p-1.5 text-gray-400 hover:bg-gray-600 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label="Next dinner"
+          >
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
       <div className="space-y-2 rounded bg-gray-700 p-3">
         <input
           type="text"

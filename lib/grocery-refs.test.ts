@@ -33,6 +33,9 @@ describe("inferCategory", () => {
     it('"zucchini" → Produce', () => {
       expect(inferCategory("zucchini")).toBe("Produce");
     });
+    it('"green beans" → Produce (not Pantry)', () => {
+      expect(inferCategory("green beans")).toBe("Produce");
+    });
     it('"tahini" → Pantry', () => {
       expect(inferCategory("tahini")).toBe("Pantry");
     });

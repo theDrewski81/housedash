@@ -221,6 +221,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
     "berries", "blueberry", "strawberry", "raspberry", "blackberry", "citrus",
     "orange", "grapefruit", "squash", "zucchini", "cucumber", "kale", "mushroom",
     "corn", "pea", "asparagus", "cabbage", "cauliflower", "radish", "mango",
+    "green beans", "green bean",
     "pear", "peach", "plum", "grape",
   ],
   Dairy: [
