@@ -13,9 +13,23 @@ export async function GET() {
     );
   }
   try {
-    await prisma.$queryRaw`SELECT "weather_lat" FROM app_config LIMIT 1`;
-    return NextResponse.json({ weatherLocationSupported: true });
+    await prisma.$queryRaw`SELECT "weather_lat", "calendar_configs" FROM app_config LIMIT 1`;
+    return NextResponse.json({
+      weatherLocationSupported: true,
+      calendarConfigsSupported: true,
+    });
   } catch {
-    return NextResponse.json({ weatherLocationSupported: false });
+    try {
+      await prisma.$queryRaw`SELECT "weather_lat" FROM app_config LIMIT 1`;
+      return NextResponse.json({
+        weatherLocationSupported: true,
+        calendarConfigsSupported: false,
+      });
+    } catch {
+      return NextResponse.json({
+        weatherLocationSupported: false,
+        calendarConfigsSupported: false,
+      });
+    }
   }
 }

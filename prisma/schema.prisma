@@ -57,6 +57,7 @@ model AppConfig {
   weatherLat           Float?   @map("weather_lat")
   weatherLon           Float?   @map("weather_lon")
   weatherLocationName  String?  @map("weather_location_name")
+  calendarConfigs      Json?    @map("calendar_configs") // [{ id: string, color?: string }]
   createdAt            DateTime @default(now()) @map("created_at")
   updatedAt            DateTime @updatedAt @map("updated_at")
 

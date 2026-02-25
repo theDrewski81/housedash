@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getAppConfig } from "@/lib/app-config";
+import { getAppConfig, type CalendarConfig } from "@/lib/app-config";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/app-config";
+import type { Prisma } from "@prisma/client";
 import { geocodeLocation } from "@/lib/api/geocode";
 
 const APP_CONFIG_ID = "default";
 const WEATHER_LOCATION_MAX_LENGTH = 200;
+const CALENDAR_ID_MAX_LENGTH = 256;
 
 export async function GET() {
   try {
@@ -50,6 +52,7 @@ export async function PATCH(request: NextRequest) {
       body.weatherLocation !== undefined
         ? (body.weatherLocation as string).trim()
         : undefined;
+    const calendarConfigsRaw = body.calendarConfigs as unknown;
 
     let weatherLocationName: string | null | undefined;
     let weatherLat: number | null | undefined;
@@ -83,6 +86,29 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    let calendarConfigs: CalendarConfig[] | null | undefined;
+    if (calendarConfigsRaw !== undefined) {
+      if (!Array.isArray(calendarConfigsRaw)) {
+        return NextResponse.json(
+          { error: "calendarConfigs must be an array" },
+          { status: 400 }
+        );
+      }
+      const parsed: CalendarConfig[] = [];
+      for (const item of calendarConfigsRaw) {
+        if (item == null || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string") {
+          continue;
+        }
+        const id = ((item as { id: string }).id || "").trim();
+        if (id.length === 0 || id.length > CALENDAR_ID_MAX_LENGTH) continue;
+        const color = typeof (item as { color?: unknown }).color === "string"
+          ? (item as { color: string }).color.trim()
+          : undefined;
+        parsed.push({ id, color: color || undefined });
+      }
+      calendarConfigs = parsed.length > 0 ? parsed : null;
+    }
+
     const updated = await prisma.appConfig.upsert({
       where: { id: APP_CONFIG_ID },
       create: {
@@ -94,6 +120,9 @@ export async function PATCH(request: NextRequest) {
         }),
         ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
         ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
+        ...(calendarConfigs !== undefined && {
+          calendarConfigs: calendarConfigs as Prisma.InputJsonValue,
+        }),
       },
       update: {
         ...(allowAccountCreation !== undefined && {
@@ -105,6 +134,9 @@ export async function PATCH(request: NextRequest) {
         }),
         ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
         ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
+        ...(calendarConfigs !== undefined && {
+          calendarConfigs: calendarConfigs as Prisma.InputJsonValue,
+        }),
       },
     });
 
@@ -123,12 +155,18 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
+    const rawUpdated = updated as { calendarConfigs?: unknown };
+    const parsedCalendars = Array.isArray(rawUpdated.calendarConfigs)
+      ? (rawUpdated.calendarConfigs as CalendarConfig[])
+      : null;
+
     return NextResponse.json({
       allowAccountCreation: updated.allowAccountCreation,
       auditUserCrud: updated.auditUserCrud,
       weatherLat: updated.weatherLat ?? null,
       weatherLon: updated.weatherLon ?? null,
       weatherLocationName: updated.weatherLocationName ?? null,
+      calendarConfigs: parsedCalendars,
     });
   } catch (error) {
     console.error("Admin settings PATCH error:", error);
@@ -138,6 +176,7 @@ export async function PATCH(request: NextRequest) {
       message.includes("weather_lat") ||
       message.includes("weather_lon") ||
       message.includes("weather_location_name") ||
+      message.includes("calendar_configs") ||
       message.includes("does not exist") ||
       message.includes("column");
     if (isSchemaError) {

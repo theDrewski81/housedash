@@ -108,7 +108,14 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
               <div className="font-semibold text-sm text-gray-300 mb-1">
                 Upcoming
               </div>
-              <div className="text-sm">
+              <div className="text-sm flex items-center gap-2">
+                {schedule.nextEvent.color && (
+                  <span
+                    className="shrink-0 w-2 h-2 rounded-full"
+                    style={{ backgroundColor: schedule.nextEvent.color }}
+                    aria-hidden
+                  />
+                )}
                 {formatUpcomingEvent(schedule.nextEvent)}
               </div>
             </div>
@@ -130,7 +137,17 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
       <div className="flex flex-col min-h-[140px]">
         <div className="flex-shrink-0">
           {allDayToday.map((e) => (
-            <div key={e.id} className="font-medium text-sm">
+            <div
+              key={e.id}
+              className="font-medium text-sm flex items-center gap-2"
+            >
+              {e.color && (
+                <span
+                  className="shrink-0 w-2 h-2 rounded-full"
+                  style={{ backgroundColor: e.color }}
+                  aria-hidden
+                />
+              )}
               {e.summary}
             </div>
           ))}
@@ -138,10 +155,19 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
         <div className="flex-1 flex items-center justify-center">
           <ul className="list-none space-y-2 text-center w-full">
             {displayList.map((e) => (
-              <li key={e.id} className="text-left">
-                <div className="font-semibold text-base">{e.summary}</div>
-                <div className="text-sm text-gray-400">
-                  {formatEventTimeRange(e)}
+              <li key={e.id} className="text-left flex items-start gap-2">
+                {e.color && (
+                  <span
+                    className="shrink-0 w-2 h-2 rounded-full mt-1.5"
+                    style={{ backgroundColor: e.color }}
+                    aria-hidden
+                  />
+                )}
+                <div>
+                  <div className="font-semibold text-base">{e.summary}</div>
+                  <div className="text-sm text-gray-400">
+                    {formatEventTimeRange(e)}
+                  </div>
                 </div>
               </li>
             ))}
@@ -168,14 +194,23 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
               {day.events.map((event) => (
                 <div
                   key={event.id}
-                  className="bg-gray-700 rounded p-2 text-sm"
+                  className="bg-gray-700 rounded p-2 text-sm flex gap-2"
                 >
-                  <div className="font-medium">{event.summary}</div>
-                  <div className="text-gray-400 text-xs mt-1">
-                    {event.start.dateTime
-                      ? format(parseISO(event.start.dateTime), "h:mm a")
-                      : "All day"}
-                    {event.location && ` • ${event.location}`}
+                  {event.color && (
+                    <span
+                      className="shrink-0 w-1 rounded-full self-stretch min-h-[2rem]"
+                      style={{ backgroundColor: event.color }}
+                      aria-hidden
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-medium">{event.summary}</div>
+                    <div className="text-gray-400 text-xs mt-1">
+                      {event.start.dateTime
+                        ? format(parseISO(event.start.dateTime), "h:mm a")
+                        : "All day"}
+                      {event.location && ` • ${event.location}`}
+                    </div>
                   </div>
                 </div>
               ))}

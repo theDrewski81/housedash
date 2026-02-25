@@ -13,6 +13,8 @@ export type AuditAction =
   | "user_delete"
   | "user_sign_out";
 
+export type CalendarConfig = { id: string; color?: string };
+
 export type AppConfigRow = {
   id: string;
   allowAccountCreation: boolean;
@@ -20,6 +22,7 @@ export type AppConfigRow = {
   weatherLat: number | null;
   weatherLon: number | null;
   weatherLocationName: string | null;
+  calendarConfigs: CalendarConfig[] | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -30,6 +33,7 @@ const DEFAULT_APP_CONFIG = {
   weatherLat: null as number | null,
   weatherLon: null as number | null,
   weatherLocationName: null as string | null,
+  calendarConfigs: null as CalendarConfig[] | null,
 };
 
 function isSchemaError(error: unknown): boolean {
@@ -39,9 +43,23 @@ function isSchemaError(error: unknown): boolean {
     msg.includes("weather_lat") ||
     msg.includes("weather_lon") ||
     msg.includes("weather_location_name") ||
+    msg.includes("calendar_configs") ||
     msg.includes("does not exist") ||
     msg.includes("column")
   );
+}
+
+function parseCalendarConfigs(val: unknown): CalendarConfig[] | null {
+  if (!Array.isArray(val)) return null;
+  return val
+    .filter((item): item is { id: string; color?: string } =>
+      item != null && typeof item === "object" && typeof (item as { id?: unknown }).id === "string"
+    )
+    .map((item) => ({
+      id: (item as { id: string }).id.trim(),
+      color: typeof (item as { color?: unknown }).color === "string" ? (item as { color: string }).color : undefined,
+    }))
+    .filter((item) => item.id.length > 0);
 }
 
 export async function getAppConfig(): Promise<{
@@ -50,6 +68,7 @@ export async function getAppConfig(): Promise<{
   weatherLat: number | null;
   weatherLon: number | null;
   weatherLocationName: string | null;
+  calendarConfigs: CalendarConfig[] | null;
 }> {
   try {
     const row = await prisma.appConfig.findUnique({
@@ -58,12 +77,14 @@ export async function getAppConfig(): Promise<{
     if (!row) {
       return { ...DEFAULT_APP_CONFIG };
     }
+    const raw = row as { calendarConfigs?: unknown };
     return {
       allowAccountCreation: row.allowAccountCreation,
       auditUserCrud: row.auditUserCrud,
       weatherLat: row.weatherLat ?? null,
       weatherLon: row.weatherLon ?? null,
       weatherLocationName: row.weatherLocationName ?? null,
+      calendarConfigs: parseCalendarConfigs(raw.calendarConfigs) ?? null,
     };
   } catch (error) {
     if (isSchemaError(error)) {

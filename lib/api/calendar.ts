@@ -11,6 +11,10 @@ export interface CalendarEvent {
     date?: string;
   };
   location?: string;
+  /** Calendar ID this event belongs to (for multi-calendar) */
+  calendarId?: string;
+  /** Assigned color for the calendar (hex) */
+  color?: string;
 }
 
 export interface ScheduleData {
@@ -112,6 +116,84 @@ export async function getCalendarEvents(
         return aTime - bTime;
       }),
     }));
+
+  return { nextEvent, weeklyEvents };
+}
+
+export type CalendarConfig = { id: string; color?: string };
+
+/** Fetch and merge events from multiple calendars */
+export async function getCalendarEventsFromConfigs(
+  configs: CalendarConfig[],
+  timezone: string
+): Promise<ScheduleData> {
+  if (configs.length === 0) {
+    return { nextEvent: null, weeklyEvents: [] };
+  }
+
+  const results = await Promise.allSettled(
+    configs.map((c) => getCalendarEvents(c.id, timezone))
+  );
+
+  const weeklyEventsMap: { [key: string]: CalendarEvent[] } = {};
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    const config = configs[i];
+    if (result.status !== "fulfilled") {
+      console.warn(`Calendar ${config.id} failed:`, result.reason);
+      continue;
+    }
+    const { weeklyEvents } = result.value;
+    const color = config.color;
+
+    const tagEvent = (e: CalendarEvent): CalendarEvent => ({
+      ...e,
+      id: `${config.id}__${e.id}`,
+      calendarId: config.id,
+      color,
+    });
+
+    weeklyEvents.forEach((day) => {
+      if (!weeklyEventsMap[day.date]) weeklyEventsMap[day.date] = [];
+      day.events.forEach((e) => {
+        weeklyEventsMap[day.date].push(tagEvent(e));
+      });
+    });
+  }
+
+  const weeklyEvents = Object.entries(weeklyEventsMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, events]) => ({
+      date,
+      events: events.sort((a, b) => {
+        const aTime = a.start.dateTime
+          ? new Date(a.start.dateTime).getTime()
+          : 0;
+        const bTime = b.start.dateTime
+          ? new Date(b.start.dateTime).getTime()
+          : 0;
+        return aTime - bTime;
+      }),
+    }));
+
+  const now = new Date();
+  const allEvents = Object.values(weeklyEventsMap).flat().sort((a, b) => {
+    const aStart = a.start.dateTime
+      ? new Date(a.start.dateTime).getTime()
+      : new Date(a.start.date!).getTime();
+    const bStart = b.start.dateTime
+      ? new Date(b.start.dateTime).getTime()
+      : new Date(b.start.date!).getTime();
+    return aStart - bStart;
+  });
+  const nextEvent =
+    allEvents.find((e) => {
+      const endDate = e.end.dateTime
+        ? new Date(e.end.dateTime)
+        : new Date(e.end.date!);
+      return endDate > now;
+    }) ?? null;
 
   return { nextEvent, weeklyEvents };
 }
