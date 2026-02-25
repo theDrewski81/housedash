@@ -39,13 +39,12 @@ export function chooseItemName(existing: string, added: string): string {
 
 /** Unit names for regex (from grocery-refs) */
 const UNIT_PATTERN =
-  "cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces";
+  "cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|ounce|ounces|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces";
 
 /**
- * Parses a quantity string like "1.5 cup", "½ tbsp", or "1/2 cup" into { value, unit }.
- * Handles unicode fractions (½→0.5) and normalizes units.
+ * Parses a single quantity part like "1.5 cup" or "8 ounce" into { value, unit }.
  */
-function parseQuantity(q: string): { value: number; unit: string } | null {
+function parseQuantityPart(q: string): { value: number; unit: string } | null {
   const normalized = parseUnicodeFraction(q.trim());
   if (!normalized) return null;
   const match = normalized.match(
@@ -66,9 +65,17 @@ function parseQuantity(q: string): { value: number; unit: string } | null {
 }
 
 /**
+ * Parses a quantity string that may contain multiple parts separated by " + ".
+ * Returns array of { value, unit }.
+ */
+function parseQuantityParts(q: string): Array<{ value: number; unit: string }> {
+  const parts = q.split(/\s*\+\s*/).map((p) => parseQuantityPart(p.trim()));
+  return parts.filter((p): p is { value: number; unit: string } => p !== null);
+}
+
+/**
  * Merges two quantity strings. When units are compatible (same type), adds values
- * and converts to salable unit (e.g. 19 tbsp → 9.5 fl oz).
- * When incompatible, concatenates with " + ".
+ * and converts to salable unit. Handles multi-part quantities like "8 ounce + 1.5 cups".
  */
 export function mergeQuantity(
   existing: string | null,
@@ -77,28 +84,47 @@ export function mergeQuantity(
   if (!added?.trim()) return existing;
   if (!existing?.trim()) return added;
 
-  const parsedExisting = parseQuantity(existing);
-  const parsedAdded = parseQuantity(added);
+  const existingParts = parseQuantityParts(existing);
+  const addedParts = parseQuantityParts(added);
 
-  if (parsedExisting && parsedAdded && parsedExisting.unit === parsedAdded.unit) {
-    const sum = parsedExisting.value + parsedAdded.value;
-    const salable = convertToSalableUnit(sum, parsedExisting.unit);
+  if (existingParts.length === 0 && addedParts.length === 0) {
+    return `${existing} + ${added}`.trim();
+  }
+
+  // Collect all parts and convert to salable units
+  const volumeByFlOz: number[] = [];
+  const weightByOz: number[] = [];
+  const other: Array<{ value: number; unit: string }> = [];
+
+  for (const p of [...existingParts, ...addedParts]) {
+    const salable = convertToSalableUnit(p.value, p.unit);
     if (salable) {
-      return `${salable.value} ${salable.unit}`;
-    }
-    const unitPart = parsedExisting.unit ? ` ${parsedExisting.unit}` : "";
-    return `${sum}${unitPart}`.trim();
-  }
-
-  // Try converting both to salable and adding (e.g. tbsp + cup → fl oz)
-  if (parsedExisting && parsedAdded) {
-    const salableA = convertToSalableUnit(parsedExisting.value, parsedExisting.unit);
-    const salableB = convertToSalableUnit(parsedAdded.value, parsedAdded.unit);
-    if (salableA && salableB && salableA.unit === salableB.unit) {
-      const sum = salableA.value + salableB.value;
-      return `${Math.round(sum * 10) / 10} ${salableA.unit}`;
+      if (salable.unit === "fl oz") volumeByFlOz.push(salable.value);
+      else if (salable.unit === "oz") weightByOz.push(salable.value);
+      else other.push(salable);
+    } else {
+      other.push(p);
     }
   }
 
-  return `${existing} + ${added}`.trim();
+  const result: string[] = [];
+  if (volumeByFlOz.length > 0) {
+    const sum = volumeByFlOz.reduce((a, b) => a + b, 0);
+    result.push(`${Math.round(sum * 10) / 10} fl oz`);
+  }
+  if (weightByOz.length > 0) {
+    const sum = weightByOz.reduce((a, b) => a + b, 0);
+    result.push(`${Math.round(sum * 10) / 10} oz`);
+  }
+  // Non-convertible units: sum same units, else keep as-is
+  const otherByUnit = new Map<string, number>();
+  for (const p of other) {
+    const key = p.unit || "count";
+    otherByUnit.set(key, (otherByUnit.get(key) ?? 0) + p.value);
+  }
+  for (const [unit, sum] of otherByUnit) {
+    result.push(unit ? `${Math.round(sum * 10) / 10} ${unit}` : String(sum));
+  }
+
+  return result.length > 0 ? result.join(" + ") : `${existing} + ${added}`.trim();
 }
