@@ -20,6 +20,12 @@ interface GroceriesWidgetProps {
 export default function GroceriesWidget({ isExpanded, onExpandToggle }: GroceriesWidgetProps = {}) {
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    itemName: "",
+    category: "Other",
+    quantity: "",
+  });
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     itemName: "",
@@ -199,46 +205,143 @@ export default function GroceriesWidget({ isExpanded, onExpandToggle }: Grocerie
                     {category}
                   </div>
                   <div className="space-y-2">
-                    {items.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`bg-gray-700 rounded p-2 flex items-center gap-3 ${
-                          item.isComplete ? "opacity-60" : ""
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={item.isComplete}
-                          onChange={() =>
-                            updateMutation.mutate({
-                              id: item.id,
-                              data: { isComplete: !item.isComplete },
-                            })
-                          }
-                          className="w-4 h-4"
-                        />
-                        <div className="flex-1">
-                          <div
-                            className={`${
-                              item.isComplete ? "line-through" : ""
-                            }`}
-                          >
-                            {item.itemName}
-                          </div>
-                          {item.quantity && (
-                            <div className="text-xs text-gray-400">
-                              {item.quantity}
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => deleteMutation.mutate(item.id)}
-                          className="text-red-400 hover:text-red-300 text-sm"
+                    {items.map((item) =>
+                      editingId === item.id ? (
+                        <div
+                          key={item.id}
+                          className="bg-gray-700 rounded p-3 space-y-2"
                         >
-                          Delete
-                        </button>
-                      </div>
-                    ))}
+                          <input
+                            type="text"
+                            placeholder="Item name"
+                            value={editForm.itemName}
+                            onChange={(e) =>
+                              setEditForm((f) => ({
+                                ...f,
+                                itemName: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Category"
+                            value={editForm.category}
+                            onChange={(e) =>
+                              setEditForm((f) => ({
+                                ...f,
+                                category: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Quantity (optional)"
+                            value={editForm.quantity}
+                            onChange={(e) =>
+                              setEditForm((f) => ({
+                                ...f,
+                                quantity: e.target.value,
+                              }))
+                            }
+                            className="w-full bg-gray-600 rounded px-3 py-2 text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                updateMutation.mutate(
+                                  {
+                                    id: item.id,
+                                    data: {
+                                      itemName: editForm.itemName.trim(),
+                                      category: editForm.category.trim() || "Other",
+                                      quantity: editForm.quantity.trim() || null,
+                                    },
+                                  },
+                                  {
+                                    onSuccess: () => setEditingId(null),
+                                  }
+                                );
+                              }}
+                              disabled={
+                                !editForm.itemName.trim() ||
+                                updateMutation.isPending
+                              }
+                              className="rounded bg-green-600 px-3 py-1 text-sm hover:bg-green-700 disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="rounded bg-gray-600 px-3 py-1 text-sm hover:bg-gray-700"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => deleteMutation.mutate(item.id)}
+                              className="rounded bg-red-600 px-3 py-1 text-sm hover:bg-red-700"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          key={item.id}
+                          className={`bg-gray-700 rounded p-2 flex items-center gap-3 ${
+                            item.isComplete ? "opacity-60" : ""
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={item.isComplete}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              updateMutation.mutate({
+                                id: item.id,
+                                data: { isComplete: !item.isComplete },
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4"
+                          />
+                          <div
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => {
+                              setEditingId(item.id);
+                              setEditForm({
+                                itemName: item.itemName,
+                                category: item.category,
+                                quantity: item.quantity ?? "",
+                              });
+                            }}
+                          >
+                            <div
+                              className={`${
+                                item.isComplete ? "line-through" : ""
+                              }`}
+                            >
+                              {item.itemName}
+                            </div>
+                            {item.quantity && (
+                              <div className="text-xs text-gray-400">
+                                {item.quantity}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteMutation.mutate(item.id);
+                            }}
+                            className="text-red-400 hover:text-red-300 text-sm shrink-0"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               ))}

@@ -19,7 +19,7 @@ export function parseIngredientLine(line: string): {
 
   // Match optional leading quantity: number (including fractions like 1/2, ½) + optional unit
   const quantityMatch = normalized.match(
-    /^(\d+(?:\.\d+)?(?:\/\d+)?(?:\s*-\s*\d+(?:\.\d+)?(?:\/\d+)?)?)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large)?\s+(.+)$/i
+    /^(\d+(?:\.\d+)?(?:\/\d+)?(?:\s*-\s*\d+(?:\.\d+)?(?:\/\d+)?)?)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|ounce|ounces|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces)?\s+(.+)$/i
   );
 
   if (quantityMatch) {
