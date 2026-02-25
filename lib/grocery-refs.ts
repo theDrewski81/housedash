@@ -183,48 +183,107 @@ export function stripItemModifiers(name: string): string {
   return result || beforeComma;
 }
 
+/** Reference table for items that don't fit keyword patterns. Normalized name → category. Checked before modifier stripping. */
+const CATEGORY_REFERENCE: Record<string, string> = {
+  "black pepper": "Spices",
+  tofu: "Pantry",
+  hummus: "Pantry",
+  tempeh: "Pantry",
+  seitan: "Pantry",
+  coffee: "Pantry",
+  tea: "Pantry",
+  juice: "Pantry",
+  soda: "Pantry",
+  water: "Pantry",
+  wine: "Pantry",
+  beer: "Pantry",
+  vinegar: "Pantry",
+  olive: "Produce",
+  olives: "Pantry",
+  pickles: "Pantry",
+  relish: "Pantry",
+  worcestershire: "Pantry",
+  "hot sauce": "Pantry",
+  sriracha: "Pantry",
+  "fish sauce": "Pantry",
+  miso: "Pantry",
+  nori: "Pantry",
+  "rice paper": "Pantry",
+  phyllo: "Bakery",
+  "pie crust": "Bakery",
+};
+
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  Produce: [
+    "garlic", "onion", "tomato", "potato", "carrot", "celery", "lettuce",
+    "spinach", "broccoli", "bell pepper", "pepper", "lemon", "lime", "apple", "banana",
+    "avocado", "ginger", "herb", "basil", "cilantro", "parsley", "mint",
+    "berries", "blueberry", "strawberry", "raspberry", "blackberry", "citrus",
+    "orange", "grapefruit", "squash", "zucchini", "cucumber", "kale", "mushroom",
+    "corn", "pea", "asparagus", "cabbage", "cauliflower", "radish", "mango",
+    "pear", "peach", "plum", "grape",
+  ],
+  Dairy: [
+    "milk", "cream", "cheese", "butter", "yogurt", "sour cream", "egg", "eggs",
+  ],
+  Meat: [
+    "chicken", "beef", "pork", "bacon", "sausage", "turkey", "fish",
+    "salmon", "shrimp", "ground beef", "ground turkey", "lamb", "ham",
+    "seafood", "tuna", "cod", "tilapia",
+  ],
+  Bakery: [
+    "bread", "breadcrumb", "flour", "tortilla", "pita", "bagel",
+    "croissant", "muffin", "roll", "cracker",
+  ],
+  Pantry: [
+    "oil", "vinegar", "soy sauce", "sauce", "broth", "stock", "rice",
+    "pasta", "noodle", "bean", "lentil", "canned", "tomato paste", "tomato sauce",
+    "sugar", "honey", "maple syrup", "peanut butter", "jam",
+    "cereal", "oat", "nut", "almond", "walnut",
+    "baking soda", "baking powder", "coconut milk", "coconut oil", "tahini",
+    "ketchup", "mustard", "mayonnaise", "salsa", "chip", "cracker",
+    "chocolate", "cocoa", "yeast", "cornstarch", "corn starch",
+    "quinoa", "couscous", "bulgur",
+  ],
+  Spices: [
+    "black pepper", "red pepper flake", "pepper flake", "bay leaf", "bay leaves",
+    "garam masala", "salt", "pepper", "paprika", "cumin", "oregano", "thyme",
+    "cinnamon", "nutmeg", "vanilla", "chili", "curry",
+    "allspice", "cardamom", "cloves", "turmeric", "sage", "rosemary", "dill",
+  ],
+  Frozen: [
+    "frozen", "ice cream",
+  ],
+};
+
+/** Flat (keyword, category) pairs sorted by keyword length descending for longest-match-first. */
+const CATEGORY_KEYWORD_PAIRS = (() => {
+  const pairs: [string, string][] = [];
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const kw of keywords) {
+      pairs.push([kw, category]);
+    }
+  }
+  return pairs.sort((a, b) => b[0].length - a[0].length);
+})();
+
 /**
  * Infers a grocery category from item name (normalized, lowercase).
+ * Strips modifiers, checks reference table, then keyword match (longest-first).
  * Returns category string; defaults to "Other" if no match.
  */
 export function inferCategory(itemName: string): string {
-  const name = itemName.toLowerCase().trim();
+  const normalized = itemName.toLowerCase().trim();
+  if (!normalized) return "Other";
+
+  const refCategory = CATEGORY_REFERENCE[normalized];
+  if (refCategory) return refCategory;
+
+  const name = stripItemModifiers(itemName).toLowerCase().trim();
   if (!name) return "Other";
 
-  const CATEGORY_KEYWORDS: Record<string, string[]> = {
-    Produce: [
-      "garlic", "onion", "tomato", "potato", "carrot", "celery", "lettuce",
-      "spinach", "broccoli", "pepper", "lemon", "lime", "apple", "banana",
-      "avocado", "ginger", "herb", "basil", "cilantro", "parsley", "mint",
-    ],
-    Dairy: [
-      "milk", "cream", "cheese", "butter", "yogurt", "sour cream",
-    ],
-    Meat: [
-      "chicken", "beef", "pork", "bacon", "sausage", "turkey", "fish",
-      "salmon", "shrimp", "ground beef", "ground turkey",
-    ],
-    Bakery: [
-      "bread", "breadcrumb", "flour", "tortilla", "pita", "bagel",
-    ],
-    Pantry: [
-      "oil", "vinegar", "soy sauce", "sauce", "broth", "stock", "rice",
-      "pasta", "noodle", "bean", "lentil", "canned", "tomato paste",
-      "sugar", "honey", "maple syrup", "peanut butter", "jam",
-      "cereal", "oat", "nut", "almond", "walnut",
-    ],
-    Spices: [
-      "salt", "pepper", "paprika", "cumin", "oregano", "thyme", "cinnamon",
-      "nutmeg", "vanilla", "chili", "curry", "garam masala", "bay leaf",
-      "red pepper flake", "pepper flake",
-    ],
-    Frozen: [
-      "frozen", "ice cream",
-    ],
-  };
-
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some((kw) => name.includes(kw))) return category;
+  for (const [kw, category] of CATEGORY_KEYWORD_PAIRS) {
+    if (name.includes(kw)) return category;
   }
   return "Other";
 }
