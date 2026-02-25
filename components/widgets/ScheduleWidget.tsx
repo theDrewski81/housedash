@@ -2,12 +2,26 @@
 
 import { useEffect, useState } from "react";
 import Widget from "@/components/ui/Widget";
-import { ScheduleData } from "@/lib/api/calendar";
+import { CalendarEvent, ScheduleData } from "@/lib/api/calendar";
 import { format, parseISO, isToday, isTomorrow } from "date-fns";
 
 interface ScheduleWidgetProps {
   isExpanded?: boolean;
   onExpandToggle?: () => void;
+}
+
+function formatEventTimeRange(event: CalendarEvent): string {
+  if (event.start.dateTime && event.end.dateTime) {
+    return `${format(parseISO(event.start.dateTime), "h:mm a")} – ${format(parseISO(event.end.dateTime), "h:mm a")}`;
+  }
+  return "All day";
+}
+
+function formatNextEventTime(event: CalendarEvent): string {
+  if (event.start.dateTime) {
+    return format(parseISO(event.start.dateTime), "h:mm a");
+  }
+  return "All day";
 }
 
 export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleWidgetProps = {}) {
@@ -41,14 +55,6 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
     }
   };
 
-  const formatEventTime = (event: ScheduleData["nextEvent"]) => {
-    if (!event) return "";
-    if (event.start.dateTime) {
-      return format(parseISO(event.start.dateTime), "h:mm a");
-    }
-    return "All day";
-  };
-
   const formatEventDate = (dateString: string) => {
     const date = parseISO(dateString);
     if (isToday(date)) return "Today";
@@ -56,30 +62,76 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
     return format(date, "EEE, MMM d");
   };
 
-  const currentContent = schedule?.nextEvent ? (
-    <div className="space-y-2">
-      <div className="font-semibold text-lg">{schedule.nextEvent.summary}</div>
-      <div className="text-sm text-gray-400">
-        {formatEventTime(schedule.nextEvent)}
+  const currentContent = (() => {
+    if (loading) return <div className="text-gray-400">Loading schedule...</div>;
+    if (error) return <div className="text-red-400">Error: {error}</div>;
+    if (!schedule) return <div className="text-gray-400">No upcoming events</div>;
+
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const todayData = schedule.weeklyEvents.find((d) => d.date === todayKey);
+    const now = new Date();
+
+    const allDayToday = (todayData?.events ?? []).filter(
+      (e) => !e.start.dateTime
+    );
+    const timedToday = (todayData?.events ?? []).filter(
+      (e) => e.start.dateTime
+    );
+    const activeOrRemaining = timedToday.filter((e) => {
+      const end = parseISO(e.end.dateTime!);
+      return end > now;
+    });
+
+    const hasEventsToday = allDayToday.length > 0 || activeOrRemaining.length > 0;
+
+    if (!hasEventsToday) {
+      return (
+        <div className="space-y-2">
+          <div className="text-gray-400">No events today</div>
+          {schedule.nextEvent && (
+            <div className="text-sm">
+              <span className="font-medium">{schedule.nextEvent.summary}</span>
+              <span className="text-gray-400 ml-1">
+                {formatNextEventTime(schedule.nextEvent)}
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const maxListLines = 3;
+    const overflowCount =
+      activeOrRemaining.length > maxListLines
+        ? activeOrRemaining.length - (maxListLines - 1)
+        : 0;
+    const displayList = overflowCount > 0
+      ? activeOrRemaining.slice(0, maxListLines - 1)
+      : activeOrRemaining.slice(0, maxListLines);
+
+    return (
+      <div className="space-y-2">
+        {allDayToday.map((e) => (
+          <div key={e.id} className="font-medium text-sm">
+            {e.summary}
+          </div>
+        ))}
+        <ul className="list-none space-y-1 text-sm">
+          {displayList.map((e) => (
+            <li key={e.id}>
+              <span className="font-medium">{e.summary}</span>
+              <span className="text-gray-400 ml-1">
+                {formatEventTimeRange(e)}
+              </span>
+            </li>
+          ))}
+          {overflowCount > 0 && (
+            <li className="text-gray-400">Plus {overflowCount} more events</li>
+          )}
+        </ul>
       </div>
-      {schedule.nextEvent.location && (
-        <div className="text-sm text-gray-400">
-          📍 {schedule.nextEvent.location}
-        </div>
-      )}
-      {schedule.nextEvent.description && (
-        <div className="text-sm text-gray-300 mt-2 line-clamp-2">
-          {schedule.nextEvent.description}
-        </div>
-      )}
-    </div>
-  ) : loading ? (
-    <div className="text-gray-400">Loading schedule...</div>
-  ) : error ? (
-    <div className="text-red-400">Error: {error}</div>
-  ) : (
-    <div className="text-gray-400">No upcoming events</div>
-  );
+    );
+  })();
 
   const weeklyContent = schedule ? (
     <div className="space-y-4">
