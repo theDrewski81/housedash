@@ -21,8 +21,14 @@ export interface ScheduleData {
   }>;
 }
 
+/** Get local date key (YYYY-MM-DD) for a date in the given timezone */
+function getDateKeyInTimezone(date: Date, timezone: string): string {
+  return date.toLocaleDateString("en-CA", { timeZone: timezone });
+}
+
 export async function getCalendarEvents(
-  calendarId: string
+  calendarId: string,
+  timezone = "UTC"
 ): Promise<ScheduleData> {
   const apiKey = process.env.GOOGLE_CALENDAR_API_KEY;
   if (!apiKey) {
@@ -69,22 +75,22 @@ export async function getCalendarEvents(
     location: item.location,
   }));
 
-  // Find next event
+  // Find next event (first event that hasn't ended yet: ongoing or upcoming)
   const nextEvent =
     events.find((e) => {
-      const eventDate = e.start.dateTime
-        ? new Date(e.start.dateTime)
-        : new Date(e.start.date!);
-      return eventDate >= now;
+      const endDate = e.end.dateTime
+        ? new Date(e.end.dateTime)
+        : new Date(e.end.date!);
+      return endDate > now;
     }) || null;
 
-  // Group events by day
+  // Group events by day (use user timezone for correct local date)
   const weeklyEventsMap: { [key: string]: CalendarEvent[] } = {};
   events.forEach((event) => {
     const eventDate = event.start.dateTime
       ? new Date(event.start.dateTime)
       : new Date(event.start.date!);
-    const dateKey = eventDate.toISOString().split("T")[0];
+    const dateKey = getDateKeyInTimezone(eventDate, timezone);
 
     if (!weeklyEventsMap[dateKey]) {
       weeklyEventsMap[dateKey] = [];

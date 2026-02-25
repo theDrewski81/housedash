@@ -17,7 +17,8 @@ export async function GET(request: Request) {
       );
     }
 
-    const schedule = await getCalendarEvents(calendarId);
+    const timezone = searchParams.get("timezone") ?? "UTC";
+    const schedule = await getCalendarEvents(calendarId, timezone);
     return NextResponse.json(schedule);
   } catch (error) {
     const message =

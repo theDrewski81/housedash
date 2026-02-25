@@ -18,10 +18,12 @@ function formatEventTimeRange(event: CalendarEvent): string {
 }
 
 function formatUpcomingEvent(event: CalendarEvent): string {
-  const dateStr = event.start.dateTime
-    ? event.start.dateTime.split("T")[0]
-    : event.start.date!;
-  const date = parseISO(dateStr);
+  const date = event.start.dateTime
+    ? parseISO(event.start.dateTime)
+    : (() => {
+        const [y, m, d] = event.start.date!.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      })();
   const dateLabel = isToday(date)
     ? "Today"
     : isTomorrow(date)
@@ -48,7 +50,10 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
   const fetchSchedule = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/widgets/schedule");
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await fetch(
+        `/api/widgets/schedule?timezone=${encodeURIComponent(timezone)}`
+      );
       const data = await response.json();
       if (!response.ok) {
         throw new Error(
@@ -65,7 +70,8 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
   };
 
   const formatEventDate = (dateString: string) => {
-    const date = parseISO(dateString);
+    const [y, m, d] = dateString.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
     if (isToday(date)) return "Today";
     if (isTomorrow(date)) return "Tomorrow";
     return format(date, "EEE, MMM d");
