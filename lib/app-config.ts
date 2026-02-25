@@ -105,11 +105,13 @@ export async function ensureAppConfig(): Promise<AppConfigRow> {
     },
     update: {},
   });
+  const raw = row as { calendarConfigs?: unknown };
   return {
     ...row,
     weatherLat: row.weatherLat ?? null,
     weatherLon: row.weatherLon ?? null,
     weatherLocationName: row.weatherLocationName ?? null,
+    calendarConfigs: parseCalendarConfigs(raw.calendarConfigs) ?? null,
   };
 }
 
