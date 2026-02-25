@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
+import {
+  itemsMatch,
+  chooseItemName,
+  mergeQuantity,
+} from "@/lib/grocery-dedupe";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,13 +37,44 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
     const body = await request.json();
+    const itemName = (body.itemName ?? "").trim();
+    const category = body.category || "Other";
+    const quantity = body.quantity?.trim() || null;
+
+    if (!itemName) {
+      return NextResponse.json(
+        { error: "itemName is required" },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.grocery.findMany({
+      where: { userId: user.id },
+    });
+
+    const match = existing.find((g) => itemsMatch(g.itemName, itemName));
+
+    if (match) {
+      const mergedName = chooseItemName(match.itemName, itemName);
+      const mergedQuantity = mergeQuantity(match.quantity, quantity);
+
+      const grocery = await prisma.grocery.update({
+        where: { id: match.id, userId: user.id },
+        data: {
+          itemName: mergedName,
+          quantity: mergedQuantity,
+        },
+      });
+
+      return NextResponse.json(grocery);
+    }
 
     const grocery = await prisma.grocery.create({
       data: {
         userId: user.id,
-        itemName: body.itemName,
-        category: body.category || "Other",
-        quantity: body.quantity || null,
+        itemName,
+        category,
+        quantity,
       },
     });
 
