@@ -149,14 +149,6 @@ export default function DashboardWidgets() {
                 }
               : undefined
           }
-        onExpandToCompletions={
-            WidgetComponent === ProjectsWidget
-              ? () => {
-                  setExpandToView("completions");
-                  setExpandedIndex(PROJECTS_WIDGET_INDEX);
-                }
-              : undefined
-          }
         />
       ))}
     </div>

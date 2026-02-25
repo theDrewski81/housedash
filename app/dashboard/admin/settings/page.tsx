@@ -32,10 +32,10 @@ const DEFAULT_CALENDAR_COLORS = [
 ];
 
 const DEFAULT_PROJECT_COLUMNS: ProjectColumnConfig[] = [
-  { id: "NOT_READY", label: "Not Ready", color: "" },
-  { id: "STARTING", label: "Starting", color: "#93c5fd" },
-  { id: "IN_PROGRESS", label: "In Progress", color: "#60a5fa" },
-  { id: "COMPLETE", label: "Complete", color: "#3b82f6" },
+  { id: "NOT_READY", label: "Step 0", color: "" },
+  { id: "STARTING", label: "Step 1", color: "#93c5fd" },
+  { id: "IN_PROGRESS", label: "Step 2", color: "#60a5fa" },
+  { id: "COMPLETE", label: "Step 3", color: "#3b82f6" },
 ];
 
 export default function AdminSettingsPage() {
@@ -383,7 +383,8 @@ export default function AdminSettingsPage() {
               </h2>
               <p className="text-gray-400 text-sm mb-4">
                 Customize the Projects widget kanban columns. Edit each column
-                label and color. Changes apply to your Projects widget.
+                label (Step 0 through Step 3). Color can be set for Step 1–3.
+                Changes apply to your Projects widget.
               </p>
               <form onSubmit={handleSaveProjects} className="space-y-4">
                 <div className="space-y-3">
@@ -392,19 +393,23 @@ export default function AdminSettingsPage() {
                       key={col.id}
                       className="flex items-center gap-3 rounded border border-gray-600 bg-gray-700/50 p-3"
                     >
-                      <input
-                        type="color"
-                        value={col.color || "#93c5fd"}
-                        onChange={(e) =>
-                          handleProjectsColumnChange(
-                            index,
-                            "color",
-                            e.target.value
-                          )
-                        }
-                        className="h-9 w-9 cursor-pointer rounded border border-gray-600 bg-transparent p-0"
-                        title="Column color"
-                      />
+                      {col.id !== "NOT_READY" ? (
+                        <input
+                          type="color"
+                          value={col.color || "#93c5fd"}
+                          onChange={(e) =>
+                            handleProjectsColumnChange(
+                              index,
+                              "color",
+                              e.target.value
+                            )
+                          }
+                          className="h-9 w-9 cursor-pointer rounded border border-gray-600 bg-transparent p-0"
+                          title="Column color"
+                        />
+                      ) : (
+                        <div className="h-9 w-9 shrink-0" aria-hidden />
+                      )}
                       <input
                         type="text"
                         value={col.label}

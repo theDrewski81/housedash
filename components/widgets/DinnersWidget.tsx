@@ -236,7 +236,7 @@ export default function DinnersWidget({
     url: "",
     ingredients: "",
   });
-  const [view, setView] = useState<"weekly" | "edit" | "rotation">("weekly");
+  const [view, setView] = useState<"weekly" | "edit" | "rotation" | "recent">("weekly");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     mealName: "",
@@ -247,6 +247,7 @@ export default function DinnersWidget({
   const [addToDinnerDialogItem, setAddToDinnerDialogItem] =
     useState<RotationItem | null>(null);
   const [removeFromRotationId, setRemoveFromRotationId] = useState<string | null>(null);
+  const [selectedRecentDinner, setSelectedRecentDinner] = useState<Dinner | null>(null);
 
   const today = useMemo(() => startOfDay(new Date()), []);
 
@@ -280,6 +281,17 @@ export default function DinnersWidget({
       if (!res.ok) throw new Error("Failed to fetch rotation");
       return res.json();
     },
+  });
+
+  const { data: recentDinners = [] } = useQuery<Dinner[]>({
+    queryKey: ["dinners-recent", format(today, "yyyy-MM-dd")],
+    queryFn: async () => {
+      const asOf = format(today, "yyyy-MM-dd");
+      const res = await fetch(`/api/widgets/dinners/recent?asOf=${asOf}`);
+      if (!res.ok) throw new Error("Failed to fetch recent dinners");
+      return res.json();
+    },
+    enabled: view === "recent",
   });
 
   const slots = useMemo(() => {
@@ -744,6 +756,76 @@ export default function DinnersWidget({
     </div>
   );
 
+  const handleAddBackFromRecent = () => {
+    if (!selectedRecentDinner) return;
+    const date = getNextAvailableDate();
+    updateMutation.mutate(
+      { id: selectedRecentDinner.id, data: { date } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["dinners-recent"] });
+          setSelectedRecentDinner(null);
+          setView("weekly");
+        },
+      }
+    );
+  };
+
+  const handleAddToRotationFromRecent = async () => {
+    if (!selectedRecentDinner) return;
+    try {
+      await addToRotationMutation.mutateAsync({
+        mealName: selectedRecentDinner.mealName,
+        description: selectedRecentDinner.description ?? undefined,
+      });
+      setSelectedRecentDinner(null);
+    } catch {
+      // Mutation already surfaces error
+    }
+  };
+
+  const recentViewContent = (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">Recent</h3>
+        <button
+          type="button"
+          onClick={() => setView("weekly")}
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          Back to weekly plan
+        </button>
+      </div>
+      <p className="text-sm text-gray-400">
+        Meals from the past 7 days. Double-click to add back or add to rotation.
+      </p>
+      <ul className="space-y-2">
+        {recentDinners.map((dinner) => (
+          <li
+            key={dinner.id}
+            className="flex items-center gap-3 rounded bg-gray-700 px-3 py-2 cursor-pointer hover:bg-gray-600"
+            onDoubleClick={() => setSelectedRecentDinner(dinner)}
+          >
+            <div className="min-w-0 flex-1 flex items-center gap-2 flex-nowrap">
+              <span className="font-medium truncate">{dinner.mealName}</span>
+              {dinner.description && (
+                <span className="text-sm text-gray-400 truncate shrink-0">
+                  {dinner.description}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-gray-500 shrink-0">
+              {format(parseISO(dinner.date), "EEE M/d")}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {recentDinners.length === 0 && (
+        <p className="text-gray-400 text-sm">No recent meals.</p>
+      )}
+    </div>
+  );
+
   const weeklyContent = (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -842,13 +924,22 @@ export default function DinnersWidget({
         </DndContext>
       )}
 
-      <button
-        type="button"
-        onClick={() => setView("rotation")}
-        className="text-sm text-blue-400 hover:text-blue-300"
-      >
-        View Rotation
-      </button>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setView("recent")}
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          Recent
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("rotation")}
+          className="text-sm text-blue-400 hover:text-blue-300"
+        >
+          View Rotation
+        </button>
+      </div>
     </div>
   );
 
@@ -857,7 +948,9 @@ export default function DinnersWidget({
       ? editViewContent
       : view === "rotation"
         ? rotationViewContent
-        : weeklyContent;
+        : view === "recent"
+          ? recentViewContent
+          : weeklyContent;
 
   return (
     <>
@@ -931,6 +1024,47 @@ export default function DinnersWidget({
                 className="rounded bg-red-600 px-3 py-2 text-sm hover:bg-red-700 disabled:opacity-50"
               >
                 Remove from Rotation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedRecentDinner && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          onClick={() => setSelectedRecentDinner(null)}
+        >
+          <div
+            className="rounded-lg bg-gray-800 p-4 shadow-xl max-w-sm w-full mx-4 flex flex-col gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-gray-200">
+              &quot;{selectedRecentDinner.mealName}&quot;
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedRecentDinner(null)}
+                className="rounded bg-gray-600 px-3 py-2 text-sm hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddBackFromRecent}
+                disabled={updateMutation.isPending}
+                className="rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-50"
+              >
+                Add Back
+              </button>
+              <button
+                type="button"
+                onClick={handleAddToRotationFromRecent}
+                disabled={addToRotationMutation.isPending}
+                className="rounded bg-blue-600 px-3 py-2 text-sm hover:bg-blue-700 disabled:opacity-50"
+              >
+                Add to Rotation
               </button>
             </div>
           </div>

@@ -36,10 +36,10 @@ import {
 } from "recharts";
 
 const DEFAULT_COLUMNS: { id: string; label: string; color: string }[] = [
-  { id: "NOT_READY", label: "Not Ready", color: "" },
-  { id: "STARTING", label: "Starting", color: "#93c5fd" },
-  { id: "IN_PROGRESS", label: "In Progress", color: "#60a5fa" },
-  { id: "COMPLETE", label: "Complete", color: "#3b82f6" },
+  { id: "NOT_READY", label: "Step 0", color: "" },
+  { id: "STARTING", label: "Step 1", color: "#93c5fd" },
+  { id: "IN_PROGRESS", label: "Step 2", color: "#60a5fa" },
+  { id: "COMPLETE", label: "Step 3", color: "#3b82f6" },
 ];
 
 type ProjectTodoStatus = "NOT_READY" | "STARTING" | "IN_PROGRESS" | "COMPLETE";
@@ -208,12 +208,12 @@ function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex-1 min-w-[180px] rounded-lg border-2 border-solid transition-colors ${
-        isOver ? "border-blue-500 bg-blue-900/20" : "border-gray-600 bg-gray-800/50"
+      className={`flex-1 min-w-[180px] transition-colors ${
+        isOver ? "bg-blue-900/20" : "bg-gray-800/50"
       }`}
     >
       <div
-        className="px-3 py-2 text-sm font-semibold border-b border-gray-700 rounded-t-lg"
+        className="px-3 py-2 text-sm font-semibold"
         style={color ? { backgroundColor: `${color}30` } : undefined}
       >
         {label}
@@ -531,10 +531,11 @@ export default function ProjectsWidget({
                 }
                 className="rounded bg-gray-600 px-2 py-1"
               >
-                <option value="NOT_READY">Not Ready</option>
-                <option value="STARTING">Starting</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="COMPLETE">Complete</option>
+                {columns.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -553,7 +554,7 @@ export default function ProjectsWidget({
         <div className="text-gray-400">Loading...</div>
       ) : (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-2">
+          <div className="flex overflow-x-auto pb-2">
             {columns.map((col, idx) => (
               <KanbanColumn
                 key={col.id}
@@ -659,6 +660,14 @@ export default function ProjectsWidget({
                   <span className="text-gray-500">
                     Completed: {c.completedAt && format(parseISO(c.completedAt), "MMM d, yyyy")}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => deleteMutation.mutate(c.id)}
+                    className="ml-auto shrink-0 text-gray-400 hover:text-red-400 p-1"
+                    aria-label="Remove from completions"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
                 </li>
               );
             })
@@ -728,27 +737,22 @@ export default function ProjectsWidget({
 
   const expandedBody = view === "completions" ? completionsContent : kanbanContent;
 
+  const collapsedColumns = columns.filter((col) => col.id !== "COMPLETE");
   const collapsedContent = (
-    <div className="space-y-2">
-      <div className="text-xs font-medium uppercase text-gray-400">
-        Projects by column
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        {columns.map((col) => (
-          <span key={col.id}>
-            {col.label}: {counts[col.id] ?? 0}
-          </span>
-        ))}
-      </div>
-      {onExpandToCompletions && (
-        <button
-          type="button"
-          onClick={onExpandToCompletions}
-          className="text-sm text-blue-400 hover:text-blue-300"
+    <div className="flex gap-2">
+      {collapsedColumns.map((col) => (
+        <div
+          key={col.id}
+          className="flex items-center justify-center min-w-[2.5rem] rounded-lg px-3 py-1.5 text-lg font-semibold"
+          style={
+            col.color
+              ? { backgroundColor: `${col.color}40` }
+              : { backgroundColor: "rgba(75, 85, 99, 0.5)" }
+          }
         >
-          View Completions
-        </button>
-      )}
+          {counts[col.id] ?? 0}
+        </div>
+      ))}
     </div>
   );
 
