@@ -17,11 +17,20 @@ function formatEventTimeRange(event: CalendarEvent): string {
   return "All day";
 }
 
-function formatNextEventTime(event: CalendarEvent): string {
-  if (event.start.dateTime) {
-    return format(parseISO(event.start.dateTime), "h:mm a");
-  }
-  return "All day";
+function formatUpcomingEvent(event: CalendarEvent): string {
+  const dateStr = event.start.dateTime
+    ? event.start.dateTime.split("T")[0]
+    : event.start.date!;
+  const date = parseISO(dateStr);
+  const dateLabel = isToday(date)
+    ? "Today"
+    : isTomorrow(date)
+      ? "Tomorrow"
+      : format(date, "EEE, MMM d");
+  const time = event.start.dateTime
+    ? format(parseISO(event.start.dateTime), "h:mm a")
+    : "All day";
+  return `${event.summary} – ${dateLabel}, ${time}`;
 }
 
 export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleWidgetProps = {}) {
@@ -89,11 +98,13 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
         <div className="space-y-2">
           <div className="text-gray-400">No events today</div>
           {schedule.nextEvent && (
-            <div className="text-sm">
-              <span className="font-medium">{schedule.nextEvent.summary}</span>
-              <span className="text-gray-400 ml-1">
-                {formatNextEventTime(schedule.nextEvent)}
-              </span>
+            <div>
+              <div className="font-semibold text-sm text-gray-300 mb-1">
+                Upcoming
+              </div>
+              <div className="text-sm">
+                {formatUpcomingEvent(schedule.nextEvent)}
+              </div>
             </div>
           )}
         </div>
