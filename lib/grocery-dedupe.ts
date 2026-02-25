@@ -2,13 +2,20 @@
  * Grocery deduplication: match similar items and merge quantities.
  */
 
+import {
+  stripItemModifiers,
+  parseUnicodeFraction,
+  normalizeUnit,
+  convertToSalableUnit,
+} from "@/lib/grocery-refs";
+
 function normalizeItemName(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, " ");
+  return stripItemModifiers(name).toLowerCase().trim().replace(/\s+/g, " ");
 }
 
 /**
  * Returns true if the two item names refer to the same purchasable item.
- * E.g. "cheddar" matches "cheddar cheese", "ranch dressing" matches "ranch dressing".
+ * Modifiers are stripped: "cheddar cheese, shredded" matches "cheddar cheese, melted".
  */
 export function itemsMatch(a: string, b: string): boolean {
   const na = normalizeItemName(a);
@@ -22,22 +29,27 @@ export function itemsMatch(a: string, b: string): boolean {
 }
 
 /**
- * Returns the more specific item name when merging.
+ * Returns the core item name (modifiers stripped) for display.
  */
 export function chooseItemName(existing: string, added: string): string {
-  const na = normalizeItemName(existing);
-  const nb = normalizeItemName(added);
-  return na.length >= nb.length ? existing : added;
+  const coreExisting = stripItemModifiers(existing).trim();
+  const coreAdded = stripItemModifiers(added).trim();
+  return coreExisting.length >= coreAdded.length ? coreExisting : coreAdded;
 }
 
+/** Unit names for regex (from grocery-refs) */
+const UNIT_PATTERN =
+  "cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large|fl oz|fluid ounce|fluid ounces";
+
 /**
- * Parses a quantity string like "1.5 cup" or "1/2 tbsp" into { value, unit }.
+ * Parses a quantity string like "1.5 cup", "½ tbsp", or "1/2 cup" into { value, unit }.
+ * Handles unicode fractions (½→0.5) and normalizes units.
  */
 function parseQuantity(q: string): { value: number; unit: string } | null {
-  const trimmed = q.trim();
-  if (!trimmed) return null;
-  const match = trimmed.match(
-    /^(\d+(?:\.\d+)?(?:\/\d+)?)\s*(cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|lb|lbs|oz|g|kg|ml|can|cans|package|packages|clove|cloves|bunch|bunches|slice|slices|piece|pieces|pinch|dash|small|medium|large)?\s*$/i
+  const normalized = parseUnicodeFraction(q.trim());
+  if (!normalized) return null;
+  const match = normalized.match(
+    new RegExp(`^(\\d+(?:\\.\\d+)?(?:\\/\\d+)?)\\s*(${UNIT_PATTERN})?\\s*$`, "i")
   );
   if (!match) return null;
   let value: number;
@@ -48,13 +60,15 @@ function parseQuantity(q: string): { value: number; unit: string } | null {
   } else {
     value = parseFloat(numStr);
   }
-  const unit = (match[2] ?? "").toLowerCase();
+  if (Number.isNaN(value)) return null;
+  const unit = normalizeUnit(match[2] ?? "");
   return { value, unit };
 }
 
 /**
- * Merges two quantity strings. When units match, adds values.
- * When units differ or one has no unit, concatenates with " + ".
+ * Merges two quantity strings. When units are compatible (same type), adds values
+ * and converts to salable unit (e.g. 19 tbsp → 9.5 fl oz).
+ * When incompatible, concatenates with " + ".
  */
 export function mergeQuantity(
   existing: string | null,
@@ -68,8 +82,22 @@ export function mergeQuantity(
 
   if (parsedExisting && parsedAdded && parsedExisting.unit === parsedAdded.unit) {
     const sum = parsedExisting.value + parsedAdded.value;
+    const salable = convertToSalableUnit(sum, parsedExisting.unit);
+    if (salable) {
+      return `${salable.value} ${salable.unit}`;
+    }
     const unitPart = parsedExisting.unit ? ` ${parsedExisting.unit}` : "";
     return `${sum}${unitPart}`.trim();
+  }
+
+  // Try converting both to salable and adding (e.g. tbsp + cup → fl oz)
+  if (parsedExisting && parsedAdded) {
+    const salableA = convertToSalableUnit(parsedExisting.value, parsedExisting.unit);
+    const salableB = convertToSalableUnit(parsedAdded.value, parsedAdded.unit);
+    if (salableA && salableB && salableA.unit === salableB.unit) {
+      const sum = salableA.value + salableB.value;
+      return `${Math.round(sum * 10) / 10} ${salableA.unit}`;
+    }
   }
 
   return `${existing} + ${added}`.trim();
