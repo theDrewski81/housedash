@@ -9,13 +9,25 @@ export function parseIngredientLine(line: string): {
   item: string;
   quantity: string | null;
 } {
-  const trimmed = line.trim();
+  // Strip leading list bullets: "- ", "• ", "* "
+  const trimmed = line.trim().replace(/^[-•*]\s+/, "");
   if (!trimmed) {
     return { item: "", quantity: null };
   }
 
   // Normalize unicode fractions (½→0.5) for quantity parsing
   const normalized = parseUnicodeFraction(trimmed);
+
+  // Alternate pattern: "N item unit" e.g. "2 garlic clove", "3 chicken breasts"
+  const endUnitMatch = normalized.match(
+    /^(\d+(?:\.\d+)?)\s+(.+?)\s+(clove|cloves|piece|pieces|slice|slices)\s*$/i
+  );
+  if (endUnitMatch) {
+    const [, numPart, itemPart, unit] = endUnitMatch;
+    const item = stripItemModifiers(cleanItemName(itemPart));
+    const quantity = `${numPart} ${unit}`.trim();
+    return { item, quantity };
+  }
 
   // Match optional leading quantity: number (including fractions like 1/2, ½) + optional unit
   const quantityMatch = normalized.match(

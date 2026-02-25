@@ -125,6 +125,12 @@ export const ITEM_MODIFIERS = new Set([
   "homemade",
   "store-bought",
   "store bought",
+  "boneless",
+  "skinless",
+  "cracked",
+  "freshly ground",
+  "black",
+  "sea",
 ]);
 
 export function parseUnicodeFraction(s: string): string {
@@ -153,9 +159,14 @@ export function stripItemModifiers(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return trimmed;
 
-  // Take only the part before the first comma (main item)
-  const beforeComma = trimmed.split(",")[0].trim();
-  const lower = beforeComma.toLowerCase();
+  // Strip parentheticals e.g. "(about 3-4 pieces)"
+  let beforeComma = trimmed
+    .split(",")[0]
+    .trim()
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .trim();
+  // Strip leading numbers (handles bad data like "2 garlic clove")
+  beforeComma = beforeComma.replace(/^\d+(?:\.\d+)?\s+/, "");
 
   // Strip leading modifiers (e.g. "whipped cream cheese" → "cream cheese")
   const sortedMods = [...ITEM_MODIFIERS].sort((a, b) => b.length - a.length);

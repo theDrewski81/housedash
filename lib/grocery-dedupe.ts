@@ -13,9 +13,17 @@ function normalizeItemName(name: string): string {
   return stripItemModifiers(name).toLowerCase().trim().replace(/\s+/g, " ");
 }
 
+/** Normalize word for matching (handles plural: breast/breasts, clove/cloves) */
+function wordMatches(w1: string, w2: string): boolean {
+  if (w1 === w2) return true;
+  if (w1.length > 1 && w2 === w1 + "s") return true;
+  if (w2.length > 1 && w1 === w2 + "s") return true;
+  return false;
+}
+
 /**
  * Returns true if the two item names refer to the same purchasable item.
- * Modifiers are stripped: "cheddar cheese, shredded" matches "cheddar cheese, melted".
+ * Modifiers are stripped; plurals match: "chicken breast" matches "chicken breasts".
  */
 export function itemsMatch(a: string, b: string): boolean {
   const na = normalizeItemName(a);
@@ -25,7 +33,9 @@ export function itemsMatch(a: string, b: string): boolean {
   const wordsB = nb.split(/\s+/).filter(Boolean);
   const shorter = wordsA.length <= wordsB.length ? wordsA : wordsB;
   const longer = wordsA.length > wordsB.length ? wordsA : wordsB;
-  return shorter.every((w) => longer.includes(w));
+  return shorter.every((sw) =>
+    longer.some((lw) => wordMatches(sw, lw))
+  );
 }
 
 /**
