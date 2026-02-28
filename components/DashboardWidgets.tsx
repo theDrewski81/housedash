@@ -20,7 +20,7 @@ const WIDGETS = [
 
 const SWIPE_THRESHOLD_PX = 50;
 
-const DINNERS_WIDGET_INDEX = 3;
+const DINNERS_WIDGET_INDEX = 2;
 const PROJECTS_WIDGET_INDEX = 5;
 
 export default function DashboardWidgets() {
