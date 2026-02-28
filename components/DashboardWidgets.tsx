@@ -41,6 +41,8 @@ export default function DashboardWidgets() {
   useEffect(() => {
     if (expandedIndex === null) return;
     const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         goPrev();
