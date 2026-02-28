@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, Fragment } from "react";
 import Widget from "@/components/ui/Widget";
 import {
   format,
@@ -739,19 +739,16 @@ export default function ProjectsWidget({
 
   const collapsedColumns = columns.filter((col) => col.id !== "COMPLETE");
   const collapsedContent = (
-    <div className="flex gap-2">
+    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 items-center justify-items-start">
       {collapsedColumns.map((col) => (
-        <div
-          key={col.id}
-          className="flex items-center justify-center min-w-[2.5rem] rounded-lg px-3 py-1.5 text-lg font-semibold"
-          style={
-            col.color
-              ? { backgroundColor: `${col.color}40` }
-              : { backgroundColor: "rgba(75, 85, 99, 0.5)" }
-          }
-        >
-          {counts[col.id] ?? 0}
-        </div>
+        <Fragment key={col.id}>
+          <span className="text-sm font-medium">
+            {col.id === "NOT_READY" ? "Projects" : col.label}
+          </span>
+          <span className="text-lg font-semibold tabular-nums text-right justify-self-end">
+            {counts[col.id] ?? 0}
+          </span>
+        </Fragment>
       ))}
     </div>
   );
