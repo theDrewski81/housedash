@@ -12,26 +12,6 @@ function LoginContent() {
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
   const errorParam = searchParams.get("error");
-  // #region agent log
-  useEffect(() => {
-    const params = Object.fromEntries(searchParams.entries());
-    fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-      body: JSON.stringify({
-        sessionId: "da6607",
-        location: "app/login/page.tsx:load",
-        message: "Login page loaded",
-        data: {
-          errorParam,
-          allParams: params,
-          href: typeof window !== "undefined" ? window.location.href : null,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }, [searchParams, errorParam]);
-  // #endregion
   const showAccountCreationDisabled =
     errorParam === "OAuthCreateAccount" || errorParam === "Callback";
   const showConfigError =
@@ -92,22 +72,6 @@ function LoginContent() {
           )}
           <button
             onClick={() => {
-              // #region agent log
-              fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-                body: JSON.stringify({
-                  sessionId: "da6607",
-                  location: "app/login/page.tsx:click",
-                  message: "Sign in with Google clicked",
-                  data: {
-                    hrefBefore: typeof window !== "undefined" ? window.location.href : null,
-                    searchBefore: typeof window !== "undefined" ? window.location.search : null,
-                  },
-                  timestamp: Date.now(),
-                }),
-              }).catch(() => {});
-              // #endregion
               router.replace("/login");
               signIn("google", { callbackUrl: "/dashboard" });
             }}

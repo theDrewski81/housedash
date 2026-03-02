@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 function isMissingTableError(error: unknown): boolean {
@@ -19,9 +19,9 @@ function dedupeRotationByMealName<T extends { mealName: string }>(items: T[]): T
 
 export async function GET() {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const items = await prisma.dinnerRotation.findMany({
-      where: { userId: user.id },
+      where: { userId: householdUserId },
       orderBy: { createdAt: "asc" },
     });
     const deduped = dedupeRotationByMealName(items);
@@ -43,11 +43,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
     const item = await prisma.dinnerRotation.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         mealName: body.mealName,
         description: body.description ?? null,
       },

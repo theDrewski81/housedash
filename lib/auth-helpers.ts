@@ -22,6 +22,16 @@ export async function requireAuth() {
   return user;
 }
 
+export async function getHouseholdUserId(): Promise<string> {
+  const user = await requireAuth();
+  const config = await prisma.appConfig.findFirst();
+
+  if (config?.householdUserId) {
+    return config.householdUserId;
+  }
+  return user.id;
+}
+
 export async function requireAdmin(): Promise<User> {
   const user = await getCurrentUser();
   if (!user) {

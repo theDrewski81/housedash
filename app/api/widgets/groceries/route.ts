@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 import {
   itemsMatch,
@@ -10,11 +10,11 @@ import { inferCategory } from "@/lib/grocery-refs";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
 
-    const where: any = { userId: user.id };
+    const where: { userId: string; category?: string } = { userId: householdUserId };
     if (category) {
       where.category = category;
     }
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
     const itemName = (body.itemName ?? "").trim();
     const requestedCategory = body.category || "Other";
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const existing = await prisma.grocery.findMany({
-      where: { userId: user.id },
+      where: { userId: householdUserId },
     });
 
     const match = existing.find((g) => itemsMatch(g.itemName, itemName));
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       const mergedQuantity = mergeQuantity(match.quantity, quantity);
 
       const grocery = await prisma.grocery.update({
-        where: { id: match.id, userId: user.id },
+        where: { id: match.id, userId: householdUserId },
         data: {
           itemName: mergedName,
           quantity: mergedQuantity,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     const grocery = await prisma.grocery.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         itemName,
         category,
         quantity,

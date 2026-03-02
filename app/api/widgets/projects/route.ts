@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId, requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectTodoStatus } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const { searchParams } = new URL(request.url);
     const countsOnly = searchParams.get("counts") === "true";
 
     if (countsOnly) {
       const counts = await prisma.projectTodo.groupBy({
         by: ["status"],
-        where: { userId: user.id },
+        where: { userId: householdUserId },
         _count: { id: true },
       });
       const result: Record<string, number> = {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     const todos = await prisma.projectTodo.findMany({
-      where: { userId: user.id },
+      where: { userId: householdUserId },
       orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
     });
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const title = typeof body.title === "string" ? body.title.trim() : "";
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const todo = await prisma.projectTodo.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         title,
         priority,
         initialPriority: priority,

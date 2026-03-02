@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId, requireAuth } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectTodoStatus } from "@prisma/client";
 
@@ -9,11 +9,11 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const existing = await prisma.projectTodo.findFirst({
-      where: { id, userId: user.id },
+      where: { id, userId: householdUserId },
     });
     if (!existing) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -57,7 +57,7 @@ export async function PATCH(
     }
 
     const todo = await prisma.projectTodo.update({
-      where: { id, userId: user.id },
+      where: { id, userId: householdUserId },
       data,
     });
 
@@ -77,10 +77,10 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
 
     await prisma.projectTodo.delete({
-      where: { id, userId: user.id },
+      where: { id, userId: householdUserId },
     });
 
     return NextResponse.json({ success: true });

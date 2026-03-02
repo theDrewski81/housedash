@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 const RECENT_DAYS = 7;
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const { searchParams } = new URL(request.url);
     const asOf = searchParams.get("asOf"); // yyyy-MM-dd, optional; defaults to server date
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const dinners = await prisma.dinner.findMany({
       where: {
-        userId: user.id,
+        userId: householdUserId,
         date: {
           gte: sevenDaysAgo,
           lt: todayStart,

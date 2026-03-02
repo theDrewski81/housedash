@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function GET() {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
 
     const completions = await prisma.projectTodo.findMany({
       where: {
-        userId: user.id,
+        userId: householdUserId,
         completedAt: { not: null },
       },
       orderBy: { completedAt: "desc" },

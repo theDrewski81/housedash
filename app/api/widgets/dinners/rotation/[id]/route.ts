@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function DELETE(
@@ -8,11 +8,11 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     await prisma.dinnerRotation.delete({
       where: {
         id,
-        userId: user.id,
+        userId: householdUserId,
       },
     });
     return NextResponse.json({ success: true });

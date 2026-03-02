@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
 
-    const where: { userId: string; category?: string } = { userId: user.id };
+    const where: { userId: string; category?: string } = { userId: householdUserId };
     if (category) where.category = category;
 
     const expenses = await prisma.budgetExpense.findMany({
@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const expense = await prisma.budgetExpense.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         category: body.category ?? "ad_hoc",
         source: body.source,
         amount: body.amount,

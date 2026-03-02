@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function GET() {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const [incomes, expenses] = await Promise.all([
       prisma.budgetIncome.findMany({
-        where: { userId: user.id },
+        where: { userId: householdUserId },
         select: { expectedPay: true },
       }),
       prisma.budgetExpense.findMany({
-        where: { userId: user.id },
+        where: { userId: householdUserId },
         select: { amount: true, paidAmount: true },
       }),
     ]);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function PATCH(
@@ -8,13 +8,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const grocery = await prisma.grocery.update({
       where: {
         id,
-        userId: user.id,
+        userId: householdUserId,
       },
       data: {
         ...(body.itemName && { itemName: body.itemName }),
@@ -40,12 +40,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
 
     await prisma.grocery.delete({
       where: {
         id,
-        userId: user.id,
+        userId: householdUserId,
       },
     });
 

@@ -55,6 +55,7 @@ model AppConfig {
   id                    String   @id @default(cuid())
   allowAccountCreation  Boolean  @default(false) @map("allow_account_creation")
   auditUserCrud        Boolean  @default(false) @map("audit_user_crud")
+  householdUserId      String?  @map("household_user_id") // When set, all widget data is shared under this user
   weatherLat           Float?   @map("weather_lat")
   weatherLon           Float?   @map("weather_lon")
   weatherLocationName  String?  @map("weather_location_name")

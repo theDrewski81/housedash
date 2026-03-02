@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 import { parseCalendarDate } from "@/lib/date-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
     const where: { userId: string; date?: { gte: Date; lte: Date } } = {
-      userId: user.id,
+      userId: householdUserId,
     };
     if (startDate && endDate) {
       // Use noon UTC for calendar-day stability; range includes full start/end days
@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const dinner = await prisma.dinner.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         date: parseCalendarDate(body.date),
         mealName: body.mealName,
         description: body.description || null,

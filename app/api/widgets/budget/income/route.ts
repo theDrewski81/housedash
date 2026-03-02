@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
 
     const incomes = await prisma.budgetIncome.findMany({
-      where: { userId: user.id },
+      where: { userId: householdUserId },
       orderBy: { createdAt: "desc" },
     });
 
@@ -23,12 +23,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth();
+    const householdUserId = await getHouseholdUserId();
     const body = await request.json();
 
     const income = await prisma.budgetIncome.create({
       data: {
-        userId: user.id,
+        userId: householdUserId,
         source: body.source,
         expectedPay: body.expectedPay,
         frequencyType: body.frequencyType,
