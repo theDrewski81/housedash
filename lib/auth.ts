@@ -88,9 +88,6 @@ export const authOptions = {
       });
       return user as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
     },
-    async linkAccount(account: Parameters<typeof baseAdapter.linkAccount>[0]) {
-      return baseAdapter.linkAccount!(account);
-    },
   },
   trustHost: true, // required when behind Cloudflare Tunnel / reverse proxy
   debug: process.env.NEXTAUTH_DEBUG === "1",
@@ -130,28 +127,13 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
-      // Look up by id first; if no id, fall back to email for manually added users.
-      let dbUser: { status: UserStatus | null } | null = null;
-      if (user?.id) {
-        dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { status: true },
-        });
-      }
-      if (!dbUser && user?.email) {
-        dbUser = await prisma.user.findFirst({
-          where: { email: { equals: user.email, mode: "insensitive" } },
-          select: { status: true },
-        });
-      }
-      if (!dbUser) {
-        // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
-        return true;
-      }
-      if (dbUser.status === "inactive") {
-        return false;
-      }
+      if (!user?.id) return false;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { status: true },
+      });
+      if (!dbUser) return false;
+      if (dbUser.status === "inactive") return false;
       if (dbUser.status === "pending_approval") return "/login/pending";
       return true;
     },
