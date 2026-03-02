@@ -31,9 +31,21 @@ function LoginContent() {
     // Kiosk only on tablet; phones get standard mobile (Google sign-in only)
     if (!isTablet || kioskAttempted.current) return;
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const kioskToken =
-      urlParams.get("kiosk") ?? (typeof window !== "undefined" ? localStorage.getItem("kioskToken") : null);
+    // URLSearchParams decodes + as space; base64 tokens often contain +. Parse manually.
+    let kioskToken: string | null = null;
+    const search = typeof window !== "undefined" ? window.location.search.slice(1) : "";
+    if (search) {
+      for (const pair of search.split("&")) {
+        const eq = pair.indexOf("=");
+        if (eq > 0 && pair.slice(0, eq) === "kiosk") {
+          kioskToken = decodeURIComponent(pair.slice(eq + 1));
+          break;
+        }
+      }
+    }
+    if (!kioskToken && typeof window !== "undefined") {
+      kioskToken = localStorage.getItem("kioskToken");
+    }
 
     if (kioskToken) {
       kioskAttempted.current = true;
