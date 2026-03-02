@@ -12,7 +12,8 @@ function LoginContent() {
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
   const errorParam = searchParams.get("error");
-  const showAccountCreationDisabled = !!errorParam;
+  const showAccountCreationDisabled = errorParam === "OAuthCreateAccount";
+  const showGenericError = !!errorParam && !showAccountCreationDisabled;
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -50,6 +51,11 @@ function LoginContent() {
           {showAccountCreationDisabled && (
             <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
               Sign-in failed. New accounts may not be accepted at this time. Contact an administrator if you need access.
+            </p>
+          )}
+          {showGenericError && (
+            <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
+              Sign-in failed. Please try again or contact an administrator.
             </p>
           )}
           <button

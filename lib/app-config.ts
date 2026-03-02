@@ -71,11 +71,19 @@ export async function getAppConfig(): Promise<{
   calendarConfigs: CalendarConfig[] | null;
 }> {
   try {
-    const row = await prisma.appConfig.findUnique({
+    let row = await prisma.appConfig.findUnique({
       where: { id: APP_CONFIG_ID },
     });
     if (!row) {
-      return { ...DEFAULT_APP_CONFIG };
+      const ensured = await ensureAppConfig();
+      return {
+        allowAccountCreation: ensured.allowAccountCreation,
+        auditUserCrud: ensured.auditUserCrud,
+        weatherLat: ensured.weatherLat ?? null,
+        weatherLon: ensured.weatherLon ?? null,
+        weatherLocationName: ensured.weatherLocationName ?? null,
+        calendarConfigs: ensured.calendarConfigs ?? null,
+      };
     }
     const raw = row as { calendarConfigs?: unknown };
     return {
