@@ -43,6 +43,7 @@ function LoginContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: "98863f", location: "app/login/page.tsx", message: "kiosk signIn attempt", data: { tokenLen: kioskToken.length, isTablet }, timestamp: Date.now(), hypothesisId: "client" }),
       }).catch(() => {});
+      fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "app/login/page.tsx", message: "kiosk signIn attempt", data: { tokenLen: kioskToken.length, isTablet, hasKioskParam: !!urlParams.get("kiosk") }, timestamp: Date.now(), hypothesisId: "H5" }) }).catch(() => {});
       // #endregion
       signIn("kiosk", {
         token: kioskToken,
