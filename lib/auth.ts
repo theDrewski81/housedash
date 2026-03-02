@@ -26,6 +26,16 @@ function _debugLog(loc: string, msg: string, data: Record<string, unknown>) {
     }).catch(() => {});
   }
 }
+function _agentLog(msg: string, data: Record<string, unknown>, hypothesisId: string) {
+  const payload = JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: msg, data, timestamp: Date.now(), hypothesisId });
+  try {
+    const dir = path.join(process.cwd(), ".cursor");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(path.join(dir, "debug-1bfcef.log"), payload + "\n");
+  } catch {
+    /* ignore */
+  }
+}
 // #endregion
 
 function parseNameToFirstLast(name: string | null | undefined): {
@@ -130,12 +140,12 @@ export const authOptions = {
         const token = credentials?.token;
         _debugLog("lib/auth.ts:authorize", "authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 });
         // #region agent log
-        fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize entry", data: { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 }, timestamp: Date.now(), hypothesisId: "H1,H4" }) }).catch(() => {});
+        _agentLog("authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 }, "H1,H4");
         // #endregion
         if (!token || token !== process.env.KIOSK_TOKEN) {
           _debugLog("lib/auth.ts:authorize", "authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN });
           // #region agent log
-          fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize token mismatch", data: { tokenMatch: token === process.env.KIOSK_TOKEN, hasToken: !!token, hasEnvToken: !!process.env.KIOSK_TOKEN }, timestamp: Date.now(), hypothesisId: "H1" }) }).catch(() => {});
+          _agentLog("authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN, hasToken: !!token, hasEnvToken: !!process.env.KIOSK_TOKEN }, "H1");
           // #endregion
           return null;
         }
@@ -144,7 +154,7 @@ export const authOptions = {
         });
         _debugLog("lib/auth.ts:authorize", "authorize user lookup", { userFound: !!user, userId: user?.id });
         // #region agent log
-        fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize user lookup", data: { userFound: !!user, userId: user?.id, status: user?.status }, timestamp: Date.now(), hypothesisId: "H2" }) }).catch(() => {});
+        _agentLog("authorize user lookup", { userFound: !!user, userId: user?.id, status: user?.status }, "H2");
         // #endregion
         if (!user) {
           try {
@@ -162,7 +172,7 @@ export const authOptions = {
             const prismaErr = err as { code?: string };
             _debugLog("lib/auth.ts:authorize", "authorize create error", { code: prismaErr.code });
             // #region agent log
-            fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize create error", data: { code: prismaErr.code, message: String((err as Error).message) }, timestamp: Date.now(), hypothesisId: "H3" }) }).catch(() => {});
+            _agentLog("authorize create error", { code: prismaErr.code, message: String((err as Error).message) }, "H3");
             // #endregion
             if (prismaErr.code === "P2002") {
               const existing = await prisma.user.findFirst({
@@ -178,7 +188,7 @@ export const authOptions = {
             }
             if (!user) {
               // #region agent log
-              fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize create failed, returning null", data: {}, timestamp: Date.now(), hypothesisId: "H3" }) }).catch(() => {});
+              _agentLog("authorize create failed, returning null", {}, "H3");
               // #endregion
               return null;
             }
@@ -187,7 +197,7 @@ export const authOptions = {
         if (user.status !== "active") {
           _debugLog("lib/auth.ts:authorize", "authorize user inactive", { status: user.status });
           // #region agent log
-          fetch("http://127.0.0.1:7425/ingest/8494e6db-d3ff-4743-a82d-f5b540bc47ee", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "1bfcef" }, body: JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: "authorize user inactive", data: { status: user.status }, timestamp: Date.now(), hypothesisId: "H2" }) }).catch(() => {});
+          _agentLog("authorize user inactive", { status: user.status }, "H2");
           // #endregion
           return null;
         }
