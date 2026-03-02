@@ -12,6 +12,24 @@ function LoginContent() {
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
   const errorParam = searchParams.get("error");
+  // #region agent log
+  useEffect(() => {
+    if (errorParam) {
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "app/login/page.tsx:errorParam",
+          message: "Login page error param from URL",
+          data: { errorParam },
+          timestamp: Date.now(),
+          hypothesisId: "H2",
+        }),
+      }).catch(() => {});
+    }
+  }, [errorParam]);
+  // #endregion
   const showAccountCreationDisabled =
     errorParam === "OAuthCreateAccount" || errorParam === "Callback";
   const showConfigError =

@@ -26,17 +26,87 @@ export const authOptions = {
   adapter: {
     ...baseAdapter,
     async getUserByEmail(email: string) {
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:getUserByEmail:entry",
+          message: "getUserByEmail called",
+          data: { email },
+          timestamp: Date.now(),
+          hypothesisId: "H3,H4",
+        }),
+      }).catch(() => {});
+      // #endregion
       const user = await prisma.user.findFirst({
         where: { email: { equals: email, mode: "insensitive" } },
       });
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:getUserByEmail:exit",
+          message: "getUserByEmail result",
+          data: { email, userFound: !!user },
+          timestamp: Date.now(),
+          hypothesisId: "H3,H4",
+        }),
+      }).catch(() => {});
+      // #endregion
       return user;
     },
     async createUser(data: Omit<AdapterUser, "id">) {
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:createUser:entry",
+          message: "createUser called",
+          data: { email: data.email },
+          timestamp: Date.now(),
+          hypothesisId: "H3,H5",
+        }),
+      }).catch(() => {});
+      // #endregion
       const config = await getAppConfig();
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:createUser:config",
+          message: "createUser config",
+          data: { allowAccountCreation: config.allowAccountCreation },
+          timestamp: Date.now(),
+          hypothesisId: "H1,H5",
+        }),
+      }).catch(() => {});
+      // #endregion
       const userCount = await prisma.user.count();
       const { firstName, lastName } = parseNameToFirstLast(data.name ?? undefined);
 
       if (userCount === 0) {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:createUser:firstUser",
+            message: "createUser first user path",
+            data: { email: data.email },
+            timestamp: Date.now(),
+            hypothesisId: "H3",
+          }),
+        }).catch(() => {});
+        // #endregion
         const user = await prisma.user.create({
           data: {
             name: data.name ?? null,
@@ -62,6 +132,20 @@ export const authOptions = {
       }
 
       if (!config.allowAccountCreation) {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:createUser:throw",
+            message: "createUser throwing ACCOUNT_CREATION_DISABLED",
+            data: { email: data.email },
+            timestamp: Date.now(),
+            hypothesisId: "H5",
+          }),
+        }).catch(() => {});
+        // #endregion
         const err = new Error(ACCOUNT_CREATION_DISABLED_ERROR) as Error & { code?: string };
         err.code = "ACCOUNT_CREATION_DISABLED";
         throw err;
@@ -71,9 +155,37 @@ export const authOptions = {
         where: { email: { equals: data.email, mode: "insensitive" } },
       });
       if (existing) {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:createUser:existing",
+            message: "createUser returning existing user",
+            data: { email: data.email },
+            timestamp: Date.now(),
+            hypothesisId: "H3,H4",
+          }),
+        }).catch(() => {});
+        // #endregion
         return existing as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
       }
 
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:createUser:newUser",
+          message: "createUser creating new pending user",
+          data: { email: data.email },
+          timestamp: Date.now(),
+          hypothesisId: "H3",
+        }),
+      }).catch(() => {});
+      // #endregion
       const user = await prisma.user.create({
         data: {
           name: data.name ?? null,
@@ -87,6 +199,38 @@ export const authOptions = {
         },
       });
       return user as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
+    },
+    async linkAccount(account: Parameters<typeof baseAdapter.linkAccount>[0]) {
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:linkAccount:entry",
+          message: "linkAccount called",
+          data: { userId: account.userId, provider: account.provider },
+          timestamp: Date.now(),
+          hypothesisId: "H4",
+        }),
+      }).catch(() => {});
+      // #endregion
+      const result = await baseAdapter.linkAccount!(account);
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:linkAccount:exit",
+          message: "linkAccount completed",
+          data: { userId: account.userId },
+          timestamp: Date.now(),
+          hypothesisId: "H4",
+        }),
+      }).catch(() => {});
+      // #endregion
+      return result;
     },
   },
   trustHost: true, // required when behind Cloudflare Tunnel / reverse proxy
