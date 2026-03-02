@@ -271,13 +271,89 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      if (!user?.id) return false;
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:signIn:entry",
+          message: "signIn callback",
+          data: { userId: user?.id, email: user?.email },
+          timestamp: Date.now(),
+          hypothesisId: "H6",
+        }),
+      }).catch(() => {});
+      // #endregion
+      if (!user?.id) {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:signIn:noUserId",
+            message: "signIn returning false: no user.id",
+            data: {},
+            timestamp: Date.now(),
+            hypothesisId: "H6",
+          }),
+        }).catch(() => {});
+        // #endregion
+        return false;
+      }
       const dbUser = await prisma.user.findUnique({
         where: { id: user.id },
         select: { status: true },
       });
-      if (!dbUser) return false;
-      if (dbUser.status === "inactive") return false;
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+        body: JSON.stringify({
+          sessionId: "da6607",
+          location: "lib/auth.ts:signIn:dbUser",
+          message: "signIn dbUser lookup",
+          data: { userId: user.id, dbUserFound: !!dbUser, status: dbUser?.status ?? null },
+          timestamp: Date.now(),
+          hypothesisId: "H6",
+        }),
+      }).catch(() => {});
+      // #endregion
+      if (!dbUser) {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:signIn:noDbUser",
+            message: "signIn returning false: dbUser not found",
+            data: { userId: user.id },
+            timestamp: Date.now(),
+            hypothesisId: "H6",
+          }),
+        }).catch(() => {});
+        // #endregion
+        return false;
+      }
+      if (dbUser.status === "inactive") {
+        // #region agent log
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
+          body: JSON.stringify({
+            sessionId: "da6607",
+            location: "lib/auth.ts:signIn:inactive",
+            message: "signIn returning false: user inactive",
+            data: { userId: user.id },
+            timestamp: Date.now(),
+            hypothesisId: "H6",
+          }),
+        }).catch(() => {});
+        // #endregion
+        return false;
+      }
       if (dbUser.status === "pending_approval") return "/login/pending";
       return true;
     },
