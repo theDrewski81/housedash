@@ -18,9 +18,11 @@ Then in `.env`:
 KIOSK_TOKEN=<paste-the-generated-token-here>
 ```
 
-## 2. Link a user to the token
+## 2. User setup (optional)
 
-The tablet will sign in as an existing user whose `kioskToken` matches `KIOSK_TOKEN`.
+Kiosk works **without manual user setup**. On first kiosk login with a valid token, a minimal kiosk user is created automatically. The dashboard shows shared household data when `household_user_id` is set in Admin Settings; otherwise it shows the kiosk user's data (empty until an admin adds content).
+
+**Optional – link kiosk to an existing user:** If you want the kiosk to sign in as a specific account (e.g. the main household account), set that user's `kiosk_token` to match `KIOSK_TOKEN`. The auto-created user is then unused.
 
 **Option A – Prisma Studio**
 
@@ -36,6 +38,8 @@ UPDATE users SET kiosk_token = 'YOUR_KIOSK_TOKEN_VALUE' WHERE email = 'your@emai
 ```
 
 Use the exact same string as in `.env` for `KIOSK_TOKEN`.
+
+**Reserved:** The email `kiosk@household.local` is reserved for the auto-created kiosk user. Do not create a normal user with this email.
 
 ## 3. Use kiosk on the tablet
 

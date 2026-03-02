@@ -1,11 +1,11 @@
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import type { UserRole, UserStatus } from "@prisma/client";
 import { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "./db/prisma";
+import GoogleProvider from "next-auth/providers/google";
 import { getAppConfig } from "./app-config";
-import type { UserRole, UserStatus } from "@prisma/client";
+import { prisma } from "./db/prisma";
 
 const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
 
@@ -112,10 +112,37 @@ export const authOptions = {
         if (!token || token !== process.env.KIOSK_TOKEN) {
           return null;
         }
-        const user = await prisma.user.findFirst({
+        let user = await prisma.user.findFirst({
           where: { kioskToken: token },
         });
-        if (!user || user.status !== "active") return null;
+        if (!user) {
+          try {
+            user = await prisma.user.create({
+              data: {
+                email: "kiosk@household.local",
+                name: "Kiosk",
+                kioskToken: token,
+                status: "active",
+                role: "user",
+              },
+            });
+          } catch (err: unknown) {
+            const prismaErr = err as { code?: string };
+            if (prismaErr.code === "P2002") {
+              const existing = await prisma.user.findFirst({
+                where: { email: "kiosk@household.local" },
+              });
+              if (existing) {
+                user = await prisma.user.update({
+                  where: { id: existing.id },
+                  data: { kioskToken: token },
+                });
+              }
+            }
+            if (!user) return null;
+          }
+        }
+        if (user.status !== "active") return null;
         return {
           id: user.id,
           email: user.email,
