@@ -200,7 +200,7 @@ export const authOptions = {
       // #endregion
       // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
       // Look up by id first; if no id, fall back to email for manually added users.
-      let dbUser: { status: string } | null = null;
+      let dbUser: { status: UserStatus | null } | null = null;
       if (user?.id) {
         dbUser = await prisma.user.findUnique({
           where: { id: user.id },

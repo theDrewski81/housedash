@@ -30,7 +30,7 @@ function LoginContent() {
         timestamp: Date.now(),
       }),
     }).catch(() => {});
-  }, [searchParams]);
+  }, [searchParams, errorParam]);
   // #endregion
   const showAccountCreationDisabled =
     errorParam === "OAuthCreateAccount" || errorParam === "Callback";
