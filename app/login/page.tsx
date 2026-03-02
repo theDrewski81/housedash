@@ -12,7 +12,8 @@ function LoginContent() {
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
   const errorParam = searchParams.get("error");
-  const showAccountCreationDisabled = errorParam === "OAuthCreateAccount";
+  const showAccountCreationDisabled =
+    errorParam === "OAuthCreateAccount" || errorParam === "Callback";
   const showGenericError = !!errorParam && !showAccountCreationDisabled;
 
   useEffect(() => {
