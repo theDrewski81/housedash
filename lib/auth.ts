@@ -141,7 +141,27 @@ export const authOptions = {
   debug: process.env.NEXTAUTH_DEBUG === "1",
   logger: {
     error(code, metadata) {
+      _dbg("lib/auth.ts:logger:error", "NextAuth error", { code, metadata: String(metadata) }, "logger");
       console.error("[NextAuth]", code, metadata);
+    },
+    warn(code) {
+      _dbg("lib/auth.ts:logger:warn", "NextAuth warn", { code }, "logger");
+    },
+    debug(code, metadata) {
+      _dbg("lib/auth.ts:logger:debug", "NextAuth debug", { code, metadata: String(metadata) }, "logger");
+    },
+  },
+  events: {
+    signIn({ user, account, isNewUser }) {
+      _dbg("lib/auth.ts:events:signIn", "NextAuth signIn event", {
+        userId: user?.id,
+        email: user?.email,
+        provider: account?.provider,
+        isNewUser,
+      }, "events");
+    },
+    signOut() {
+      _dbg("lib/auth.ts:events:signOut", "NextAuth signOut event", {}, "events");
     },
   },
   providers: [
