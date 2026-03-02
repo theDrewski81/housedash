@@ -14,7 +14,12 @@ function LoginContent() {
   const errorParam = searchParams.get("error");
   const showAccountCreationDisabled =
     errorParam === "OAuthCreateAccount" || errorParam === "Callback";
-  const showGenericError = !!errorParam && !showAccountCreationDisabled;
+  const showConfigError =
+    errorParam === "OAuthCallback" || errorParam === "OAuthSignin";
+  const showGenericError =
+    !!errorParam &&
+    !showAccountCreationDisabled &&
+    !showConfigError;
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -54,13 +59,22 @@ function LoginContent() {
               Sign-in failed. New accounts may not be accepted at this time. Contact an administrator if you need access.
             </p>
           )}
+          {showConfigError && (
+            <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
+              Sign-in failed. Check NEXTAUTH_URL and proxy configuration (see
+              README troubleshooting).
+            </p>
+          )}
           {showGenericError && (
             <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
               Sign-in failed. Please try again or contact an administrator.
             </p>
           )}
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+            onClick={() => {
+              router.replace("/login");
+              signIn("google", { callbackUrl: "/dashboard" });
+            }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
           >
             Sign in with Google
