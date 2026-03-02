@@ -12,5 +12,9 @@ export default async function DashboardLayoutServer({
   if (!session) {
     redirect("/login");
   }
+  const status = (session.user as { status?: string })?.status;
+  if (status === "pending_approval") {
+    redirect("/login/pending");
+  }
   return <>{children}</>;
 }

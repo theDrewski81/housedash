@@ -198,28 +198,39 @@ export const authOptions = {
       // #region agent log
       _dbg("lib/auth.ts:signIn:entry", "signIn callback", { userId: user?.id, email: user?.email }, "H6");
       // #endregion
-      if (!user?.id) {
-        // #region agent log
-        _dbg("lib/auth.ts:signIn:noUserId", "signIn returning false: no user.id", {}, "H6");
-        // #endregion
-        return false;
+      // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
+      // Look up by id first; if no id, fall back to email for manually added users.
+      let dbUser: { status: string } | null = null;
+      if (user?.id) {
+        dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { status: true },
+        });
       }
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { status: true },
-      });
+      if (!dbUser && user?.email) {
+        dbUser = await prisma.user.findFirst({
+          where: { email: { equals: user.email, mode: "insensitive" } },
+          select: { status: true },
+        });
+      }
       // #region agent log
-      _dbg("lib/auth.ts:signIn:dbUser", "signIn dbUser lookup", { userId: user.id, dbUserFound: !!dbUser, status: dbUser?.status ?? null }, "H6");
+      _dbg("lib/auth.ts:signIn:dbUser", "signIn dbUser lookup", {
+        userId: user?.id,
+        email: user?.email,
+        dbUserFound: !!dbUser,
+        status: dbUser?.status ?? null,
+      }, "H6");
       // #endregion
       if (!dbUser) {
+        // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
         // #region agent log
-        _dbg("lib/auth.ts:signIn:noDbUser", "signIn returning false: dbUser not found", { userId: user.id }, "H6");
+        _dbg("lib/auth.ts:signIn:newUser", "signIn allowing new user (no DB record)", { email: user?.email }, "H6");
         // #endregion
-        return false;
+        return true;
       }
       if (dbUser.status === "inactive") {
         // #region agent log
-        _dbg("lib/auth.ts:signIn:inactive", "signIn returning false: user inactive", { userId: user.id }, "H6");
+        _dbg("lib/auth.ts:signIn:inactive", "signIn returning false: user inactive", { userId: user?.id }, "H6");
         // #endregion
         return false;
       }
