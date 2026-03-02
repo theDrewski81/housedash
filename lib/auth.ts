@@ -108,13 +108,24 @@ export const authOptions = {
         token: { label: "Kiosk token", type: "password" },
       },
       async authorize(credentials) {
+        // #region agent log
+        const _log = (msg: string, data: Record<string, unknown>) =>
+          fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "98863f" },
+            body: JSON.stringify({ sessionId: "98863f", location: "lib/auth.ts:authorize", message: msg, data, timestamp: Date.now() }),
+          }).catch(() => {});
+        // #endregion
         const token = credentials?.token;
+        _log("authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 });
         if (!token || token !== process.env.KIOSK_TOKEN) {
+          _log("authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN });
           return null;
         }
         let user = await prisma.user.findFirst({
           where: { kioskToken: token },
         });
+        _log("authorize user lookup", { userFound: !!user, userId: user?.id });
         if (!user) {
           try {
             user = await prisma.user.create({
@@ -126,8 +137,10 @@ export const authOptions = {
                 role: "user",
               },
             });
+            _log("authorize user created", { userId: user.id });
           } catch (err: unknown) {
             const prismaErr = err as { code?: string };
+            _log("authorize create error", { code: prismaErr.code });
             if (prismaErr.code === "P2002") {
               const existing = await prisma.user.findFirst({
                 where: { email: "kiosk@household.local" },
@@ -137,12 +150,17 @@ export const authOptions = {
                   where: { id: existing.id },
                   data: { kioskToken: token },
                 });
+                _log("authorize user updated", { userId: user.id });
               }
             }
             if (!user) return null;
           }
         }
-        if (user.status !== "active") return null;
+        if (user.status !== "active") {
+          _log("authorize user inactive", { status: user.status });
+          return null;
+        }
+        _log("authorize success", { userId: user.id });
         return {
           id: user.id,
           email: user.email,
@@ -154,9 +172,18 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
+      // #region agent log
+      const _log = (msg: string, data: Record<string, unknown>) =>
+        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "98863f" },
+          body: JSON.stringify({ sessionId: "98863f", location: "lib/auth.ts:signIn", message: msg, data, timestamp: Date.now(), hypothesisId: "signIn" }),
+        }).catch(() => {});
+      // #endregion
       // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
       // Look up by id first; if no id, fall back to email for manually added users.
       let dbUser: { status: UserStatus | null } | null = null;
+      _log("signIn entry", { userId: user?.id, email: user?.email });
       if (user?.id) {
         dbUser = await prisma.user.findUnique({
           where: { id: user.id },
@@ -169,14 +196,21 @@ export const authOptions = {
           select: { status: true },
         });
       }
+      _log("signIn dbUser", { found: !!dbUser, status: dbUser?.status });
       if (!dbUser) {
         // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
+        _log("signIn no dbUser, allow", {});
         return true;
       }
       if (dbUser.status === "inactive") {
+        _log("signIn inactive, reject", {});
         return false;
       }
-      if (dbUser.status === "pending_approval") return "/login/pending";
+      if (dbUser.status === "pending_approval") {
+        _log("signIn pending_approval", {});
+        return "/login/pending";
+      }
+      _log("signIn allow", {});
       return true;
     },
     async redirect({ url, baseUrl }) {

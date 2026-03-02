@@ -37,6 +37,13 @@ function LoginContent() {
 
     if (kioskToken) {
       kioskAttempted.current = true;
+      // #region agent log
+      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "98863f" },
+        body: JSON.stringify({ sessionId: "98863f", location: "app/login/page.tsx", message: "kiosk signIn attempt", data: { tokenLen: kioskToken.length, isTablet: isTablet }, timestamp: Date.now(), hypothesisId: "client" }),
+      }).catch(() => {});
+      // #endregion
       signIn("kiosk", {
         token: kioskToken,
         callbackUrl: "/dashboard",
