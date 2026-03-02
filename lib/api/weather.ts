@@ -78,11 +78,14 @@ export async function getWeatherData(
     timezone: currentData.timezone ?? 0,
   };
 
-  // Process forecast - group by day and get daily min/max
+  // Process forecast - group by local day using location timezone (avoid UTC date boundary issues)
+  const timezone = forecastData.city?.timezone ?? currentData.timezone ?? 0;
   const dailyForecast: { [key: string]: any } = {};
   forecastData.list.forEach((item: any) => {
-    const date = new Date(item.dt * 1000);
-    const dateKey = date.toISOString().split("T")[0];
+    const localDayIndex = Math.floor((item.dt + timezone) / 86400);
+    const dateKey = new Date((localDayIndex * 86400 - timezone) * 1000)
+      .toISOString()
+      .split("T")[0];
 
     if (!dailyForecast[dateKey]) {
       dailyForecast[dateKey] = {
@@ -103,7 +106,7 @@ export async function getWeatherData(
   });
 
   const forecast = Object.values(dailyForecast)
-    .slice(0, 8)
+    .slice(0, 6)
     .map((day: any) => ({
       date: day.date,
       temp: {

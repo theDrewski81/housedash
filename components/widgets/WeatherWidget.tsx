@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Widget from "@/components/ui/Widget";
+import WeatherIcon from "@/components/weather/WeatherIcon";
 import { WeatherData } from "@/lib/api/weather";
 
 interface WeatherWidgetProps {
@@ -87,10 +88,11 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
               : "flex items-center gap-4"
           }
         >
-          <img
-            src={`https://openweathermap.org/img/wn/${weather.current.icon}@2x.png`}
-            alt={weather.current.description}
-            className={isExpanded ? "w-20 h-20 flex-shrink-0" : "w-16 h-16"}
+          <WeatherIcon
+            icon={weather.current.icon}
+            size={isExpanded ? 80 : 64}
+            className="flex-shrink-0 text-amber-200"
+            title={weather.current.description}
           />
           <div className="min-w-0">
             <div
@@ -123,10 +125,11 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
                       hour12: true,
                     })}
                   </span>
-                  <img
-                    src={`https://openweathermap.org/img/wn/${h.icon}@2x.png`}
-                    alt={h.description}
-                    className="w-10 h-10 flex-shrink-0"
+                  <WeatherIcon
+                    icon={h.icon}
+                    size={40}
+                    className="flex-shrink-0 text-amber-200/90"
+                    title={h.description}
                   />
                   <span className="text-sm font-medium">{h.temp}°</span>
                 </div>
@@ -186,30 +189,29 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
     <div className="text-red-400">Error: {error}</div>
   );
 
-  const forecastContent = weather ? (
+  const fiveDayForecast = weather?.forecast?.slice(1, 6) ?? [];
+  const forecastContent = weather && fiveDayForecast.length > 0 ? (
     <div className="flex justify-center w-full">
       <div
-        className="grid gap-3 w-2/3 mx-auto"
+        className="grid gap-3 w-3/4 mx-auto"
         style={{
-          gridTemplateColumns: `repeat(${weather.forecast.length}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${fiveDayForecast.length}, minmax(0, 1fr))`,
         }}
       >
-      {weather.forecast.map((day, index) => (
+      {fiveDayForecast.map((day) => (
         <div
           key={day.date}
           className="flex flex-col items-center gap-1.5 p-3 bg-gray-700/80 rounded-lg min-w-0"
         >
           <div className="text-sm font-medium text-gray-300 truncate w-full text-center leading-tight">
-            {index === 0
-              ? "Today"
-              : new Date(day.date).toLocaleDateString("en-US", {
-                  weekday: "short",
-                })}
+            {new Date(day.date + "T12:00:00").toLocaleDateString("en-US", {
+              weekday: "short",
+            })}
           </div>
-          <img
-            src={`https://openweathermap.org/img/wn/${day.icon}@2x.png`}
-            alt={day.description}
-            className="w-10 h-10 flex-shrink-0"
+          <WeatherIcon
+            icon={day.icon}
+            size={40}
+            className="flex-shrink-0 text-amber-200/90"
             title={day.description}
           />
           <div className="text-sm font-semibold whitespace-nowrap">
