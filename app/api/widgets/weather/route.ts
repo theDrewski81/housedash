@@ -12,8 +12,8 @@ export async function GET(request: Request) {
       ? parseFloat(searchParams.get("lon")!)
       : undefined;
 
+    const config = await getAppConfig();
     if (lat === undefined || lon === undefined) {
-      const config = await getAppConfig();
       if (
         config.weatherLat != null &&
         config.weatherLon != null
@@ -24,7 +24,10 @@ export async function GET(request: Request) {
     }
 
     const weather = await getWeatherData(lat, lon);
-    return NextResponse.json(weather);
+    return NextResponse.json({
+      ...weather,
+      weatherIconSet: config.weatherIconSet ?? "openweather",
+    });
   } catch (error) {
     console.error("Weather API error:", error);
     return NextResponse.json(

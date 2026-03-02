@@ -15,6 +15,8 @@ export type AuditAction =
 
 export type CalendarConfig = { id: string; color?: string };
 
+export type WeatherIconSetValue = "openweather" | "meteocons" | "visualcrossing" | null;
+
 export type AppConfigRow = {
   id: string;
   allowAccountCreation: boolean;
@@ -22,6 +24,7 @@ export type AppConfigRow = {
   weatherLat: number | null;
   weatherLon: number | null;
   weatherLocationName: string | null;
+  weatherIconSet: WeatherIconSetValue;
   calendarConfigs: CalendarConfig[] | null;
   createdAt: Date;
   updatedAt: Date;
@@ -33,6 +36,7 @@ const DEFAULT_APP_CONFIG = {
   weatherLat: null as number | null,
   weatherLon: null as number | null,
   weatherLocationName: null as string | null,
+  weatherIconSet: null as WeatherIconSetValue,
   calendarConfigs: null as CalendarConfig[] | null,
 };
 
@@ -43,6 +47,7 @@ function isSchemaError(error: unknown): boolean {
     msg.includes("weather_lat") ||
     msg.includes("weather_lon") ||
     msg.includes("weather_location_name") ||
+    msg.includes("weather_icon_set") ||
     msg.includes("calendar_configs") ||
     msg.includes("does not exist") ||
     msg.includes("column")
@@ -62,12 +67,18 @@ function parseCalendarConfigs(val: unknown): CalendarConfig[] | null {
     .filter((item) => item.id.length > 0);
 }
 
+function parseWeatherIconSet(val: unknown): WeatherIconSetValue {
+  if (val !== "meteocons" && val !== "visualcrossing" && val !== "openweather") return null;
+  return val;
+}
+
 export async function getAppConfig(): Promise<{
   allowAccountCreation: boolean;
   auditUserCrud: boolean;
   weatherLat: number | null;
   weatherLon: number | null;
   weatherLocationName: string | null;
+  weatherIconSet: WeatherIconSetValue;
   calendarConfigs: CalendarConfig[] | null;
 }> {
   try {
@@ -82,16 +93,18 @@ export async function getAppConfig(): Promise<{
         weatherLat: ensured.weatherLat ?? null,
         weatherLon: ensured.weatherLon ?? null,
         weatherLocationName: ensured.weatherLocationName ?? null,
+        weatherIconSet: ensured.weatherIconSet ?? null,
         calendarConfigs: ensured.calendarConfigs ?? null,
       };
     }
-    const raw = row as { calendarConfigs?: unknown };
+    const raw = row as { calendarConfigs?: unknown; weatherIconSet?: unknown };
     return {
       allowAccountCreation: row.allowAccountCreation,
       auditUserCrud: row.auditUserCrud,
       weatherLat: row.weatherLat ?? null,
       weatherLon: row.weatherLon ?? null,
       weatherLocationName: row.weatherLocationName ?? null,
+      weatherIconSet: parseWeatherIconSet(raw.weatherIconSet) ?? null,
       calendarConfigs: parseCalendarConfigs(raw.calendarConfigs) ?? null,
     };
   } catch (error) {
@@ -113,12 +126,13 @@ export async function ensureAppConfig(): Promise<AppConfigRow> {
     },
     update: {},
   });
-  const raw = row as { calendarConfigs?: unknown };
+  const raw = row as { calendarConfigs?: unknown; weatherIconSet?: unknown };
   return {
     ...row,
     weatherLat: row.weatherLat ?? null,
     weatherLon: row.weatherLon ?? null,
     weatherLocationName: row.weatherLocationName ?? null,
+    weatherIconSet: parseWeatherIconSet(raw.weatherIconSet) ?? null,
     calendarConfigs: parseCalendarConfigs(raw.calendarConfigs) ?? null,
   };
 }

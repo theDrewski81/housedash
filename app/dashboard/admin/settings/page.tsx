@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import CollapsibleSection from "@/components/ui/CollapsibleSection";
+import UserManagementSettings from "@/components/admin/UserManagementSettings";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 type CalendarConfig = { id: string; color?: string };
@@ -14,6 +17,7 @@ type SettingsResponse = {
   weatherLat?: number | null;
   weatherLon?: number | null;
   weatherLocationName?: string | null;
+  weatherIconSet?: "openweather" | "meteocons" | "visualcrossing" | null;
   calendarConfigs?: CalendarConfig[] | null;
 };
 
@@ -45,6 +49,7 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [weatherLocation, setWeatherLocation] = useState<string>("");
+  const [weatherIconSet, setWeatherIconSet] = useState<string>("openweather");
   const [weatherLocationSupported, setWeatherLocationSupported] =
     useState<boolean>(true);
   const [calendarConfigsSupported, setCalendarConfigsSupported] =
@@ -70,6 +75,13 @@ export default function AdminSettingsPage() {
         data.weatherLocationName != null && data.weatherLocationName !== ""
           ? data.weatherLocationName
           : ""
+      );
+      setWeatherIconSet(
+        data.weatherIconSet === "meteocons" ||
+        data.weatherIconSet === "visualcrossing" ||
+        data.weatherIconSet === "openweather"
+          ? data.weatherIconSet
+          : "openweather"
       );
       setCalendarConfigs(
         Array.isArray(data.calendarConfigs) ? data.calendarConfigs : []
@@ -116,10 +128,19 @@ export default function AdminSettingsPage() {
     setSuccess(false);
     try {
       const value = weatherLocation.trim() || null;
+      const iconSet =
+        weatherIconSet === "meteocons" ||
+        weatherIconSet === "visualcrossing" ||
+        weatherIconSet === "openweather"
+          ? weatherIconSet
+          : null;
       const res = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weatherLocation: value }),
+        body: JSON.stringify({
+          weatherLocation: value,
+          weatherIconSet: iconSet,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -133,6 +154,13 @@ export default function AdminSettingsPage() {
           ? data.weatherLocationName
           : ""
       );
+      if (
+        data.weatherIconSet === "meteocons" ||
+        data.weatherIconSet === "visualcrossing" ||
+        data.weatherIconSet === "openweather"
+      ) {
+        setWeatherIconSet(data.weatherIconSet);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -241,10 +269,7 @@ export default function AdminSettingsPage() {
           <div className="text-gray-400">Loading...</div>
         ) : (
           <>
-            <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Weather location
-              </h2>
+            <CollapsibleSection title="Weather" defaultCollapsed={true}>
               {!weatherLocationSupported && (
                 <div className="mb-4 rounded border border-amber-600/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
                   Migrations required to save weather location. See README Docker
@@ -282,6 +307,24 @@ export default function AdminSettingsPage() {
                     placeholder="e.g. Seattle, WA or 98101"
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="weather-icon-set"
+                    className="block text-sm text-gray-300 mb-1"
+                  >
+                    Icon set
+                  </label>
+                  <select
+                    id="weather-icon-set"
+                    value={weatherIconSet}
+                    onChange={(e) => setWeatherIconSet(e.target.value)}
+                    className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+                  >
+                    <option value="openweather">OpenWeather (default)</option>
+                    <option value="meteocons">Meteocons</option>
+                    <option value="visualcrossing">Visual Crossing</option>
+                  </select>
+                </div>
                 <button
                   type="submit"
                   disabled={saving}
@@ -290,12 +333,9 @@ export default function AdminSettingsPage() {
                   {saving ? "Saving..." : "Save"}
                 </button>
               </form>
-            </section>
+            </CollapsibleSection>
 
-            <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Calendars
-              </h2>
+            <CollapsibleSection title="Calendars" defaultCollapsed={true}>
               {!calendarConfigsSupported && (
                 <div className="mb-4 rounded border border-amber-600/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200">
                   Migrations required to manage calendars. Run{" "}
@@ -375,12 +415,9 @@ export default function AdminSettingsPage() {
                   {savingCalendars ? "Saving..." : "Save calendars"}
                 </button>
               </form>
-            </section>
+            </CollapsibleSection>
 
-            <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Projects
-              </h2>
+            <CollapsibleSection title="Projects" defaultCollapsed={true}>
               <p className="text-gray-400 text-sm mb-4">
                 Customize the Projects widget kanban columns. Edit each column
                 label (Step 0 through Step 3). Color can be set for Step 1–3.
@@ -437,7 +474,20 @@ export default function AdminSettingsPage() {
                   {savingProjects ? "Saving..." : "Save Projects"}
                 </button>
               </form>
-            </section>
+            </CollapsibleSection>
+
+            <CollapsibleSection title="User Management" defaultCollapsed={true}>
+              <UserManagementSettings />
+            </CollapsibleSection>
+
+            <div className="pt-4 border-t border-gray-700">
+              <Link
+                href="/dashboard/admin/logs"
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                Logs
+              </Link>
+            </div>
           </>
         )}
       </div>

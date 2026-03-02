@@ -105,13 +105,25 @@ export async function getWeatherData(
     dailyForecast[dateKey].windSpeed.push(item.wind.speed);
   });
 
+  const now = Math.floor(Date.now() / 1000);
+  const localDayIndex = Math.floor((now + timezone) / 86400);
+  const todayKey = new Date((localDayIndex * 86400 - timezone) * 1000)
+    .toISOString()
+    .split("T")[0];
+
   const forecast = Object.values(dailyForecast)
     .slice(0, 6)
-    .map((day: any) => ({
+    .map((day: any, index: number) => {
+      const dayMin = Math.min(...day.temps);
+      const dayMax = Math.max(...day.temps);
+      const isToday = index === 0 && day.date === todayKey;
+      const tempMin = isToday ? Math.min(dayMin, current.temp) : dayMin;
+      const tempMax = isToday ? Math.max(dayMax, current.temp) : dayMax;
+      return {
       date: day.date,
       temp: {
-        min: Math.round(Math.min(...day.temps)),
-        max: Math.round(Math.max(...day.temps)),
+        min: Math.round(tempMin),
+        max: Math.round(tempMax),
       },
       description: day.descriptions[Math.floor(day.descriptions.length / 2)],
       icon: day.icons[Math.floor(day.icons.length / 2)],
@@ -123,9 +135,9 @@ export async function getWeatherData(
         day.windSpeed.reduce((a: number, b: number) => a + b, 0) /
           day.windSpeed.length
       ),
-    }));
+    };
+    });
 
-  const now = Math.floor(Date.now() / 1000);
   const futureList = forecastData.list.filter(
     (item: { dt: number }) => item.dt >= now
   );

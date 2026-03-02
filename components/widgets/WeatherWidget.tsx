@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Widget from "@/components/ui/Widget";
 import WeatherIcon from "@/components/weather/WeatherIcon";
+import type { WeatherIconSet } from "@/components/weather/WeatherIcon";
 import { WeatherData } from "@/lib/api/weather";
 
 interface WeatherWidgetProps {
@@ -10,10 +11,15 @@ interface WeatherWidgetProps {
   onExpandToggle?: () => void;
 }
 
+type WeatherResponse = WeatherData & {
+  weatherIconSet?: WeatherIconSet | null;
+};
+
 export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWidgetProps = {}) {
-  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [weather, setWeather] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const iconSet = weather?.weatherIconSet ?? "openweather";
 
   useEffect(() => {
     fetchWeather();
@@ -90,8 +96,9 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
         >
           <WeatherIcon
             icon={weather.current.icon}
+            iconSet={iconSet}
             size={isExpanded ? 80 : 64}
-            className="flex-shrink-0 text-amber-200"
+            alt={weather.current.description}
             title={weather.current.description}
           />
           <div className="min-w-0">
@@ -127,8 +134,9 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
                   </span>
                   <WeatherIcon
                     icon={h.icon}
+                    iconSet={iconSet}
                     size={40}
-                    className="flex-shrink-0 text-amber-200/90"
+                    alt={h.description}
                     title={h.description}
                   />
                   <span className="text-sm font-medium">{h.temp}°</span>
@@ -210,8 +218,9 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
           </div>
           <WeatherIcon
             icon={day.icon}
+            iconSet={iconSet}
             size={40}
-            className="flex-shrink-0 text-amber-200/90"
+            alt={day.description}
             title={day.description}
           />
           <div className="text-sm font-semibold whitespace-nowrap">

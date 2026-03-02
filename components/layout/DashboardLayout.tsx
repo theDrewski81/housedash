@@ -14,6 +14,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const isOnSettings =
+    pathname?.startsWith("/dashboard/admin/") ?? false;
+  const isAdmin = session?.user?.role === "admin";
 
   if (status === "loading") {
     return (
@@ -34,45 +37,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-6">
-              <Link
-                href="/dashboard"
-                className="text-2xl font-bold text-white hover:text-gray-200"
-              >
-                Home Dashboard
-              </Link>
-              {session.user?.role === "admin" && (
-                <nav className="flex items-center gap-4" aria-label="Admin">
-                  <Link
-                    href="/dashboard/admin/users"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith("/dashboard/admin/users")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    User management
-                  </Link>
-                  <Link
-                    href="/dashboard/admin/logs"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith("/dashboard/admin/logs")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Logs
-                  </Link>
-                  <Link
-                    href="/dashboard/admin/settings"
-                    className={`text-sm font-medium ${
-                      pathname?.startsWith("/dashboard/admin/settings")
-                        ? "text-white"
-                        : "text-gray-400 hover:text-white"
-                    }`}
-                  >
-                    Settings
-                  </Link>
-                </nav>
+              {isAdmin ? (
+                <Link
+                  href={isOnSettings ? "/dashboard" : "/dashboard/admin/settings"}
+                  className="text-2xl font-bold text-white hover:text-gray-200"
+                >
+                  {isOnSettings ? "Dashboard" : "Settings"}
+                </Link>
+              ) : (
+                <Link
+                  href="/dashboard"
+                  className="text-2xl font-bold text-white hover:text-gray-200"
+                >
+                  Home Dashboard
+                </Link>
               )}
             </div>
             <div className="flex items-center gap-4">

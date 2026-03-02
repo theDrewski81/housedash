@@ -52,6 +52,15 @@ export async function PATCH(request: NextRequest) {
       body.weatherLocation !== undefined
         ? (body.weatherLocation as string).trim()
         : undefined;
+    const weatherIconSetRaw = body.weatherIconSet as string | undefined;
+    const weatherIconSet =
+      weatherIconSetRaw === "meteocons" ||
+      weatherIconSetRaw === "visualcrossing" ||
+      weatherIconSetRaw === "openweather"
+        ? weatherIconSetRaw
+        : weatherIconSetRaw === "" || weatherIconSetRaw === null
+          ? null
+          : undefined;
     const calendarConfigsRaw = body.calendarConfigs as unknown;
 
     let weatherLocationName: string | null | undefined;
@@ -120,6 +129,9 @@ export async function PATCH(request: NextRequest) {
         }),
         ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
         ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
+        ...(weatherIconSet !== undefined && {
+          weatherIconSet: weatherIconSet ?? null,
+        }),
         ...(calendarConfigs !== undefined && {
           calendarConfigs: calendarConfigs as Prisma.InputJsonValue,
         }),
@@ -134,6 +146,9 @@ export async function PATCH(request: NextRequest) {
         }),
         ...(weatherLat !== undefined && { weatherLat: weatherLat ?? null }),
         ...(weatherLon !== undefined && { weatherLon: weatherLon ?? null }),
+        ...(weatherIconSet !== undefined && {
+          weatherIconSet: weatherIconSet ?? null,
+        }),
         ...(calendarConfigs !== undefined && {
           calendarConfigs: calendarConfigs as Prisma.InputJsonValue,
         }),
@@ -160,12 +175,21 @@ export async function PATCH(request: NextRequest) {
       ? (rawUpdated.calendarConfigs as CalendarConfig[])
       : null;
 
+    const rawWeatherIconSet = (updated as { weatherIconSet?: string | null }).weatherIconSet;
+    const parsedWeatherIconSet =
+      rawWeatherIconSet === "meteocons" ||
+      rawWeatherIconSet === "visualcrossing" ||
+      rawWeatherIconSet === "openweather"
+        ? rawWeatherIconSet
+        : null;
+
     return NextResponse.json({
       allowAccountCreation: updated.allowAccountCreation,
       auditUserCrud: updated.auditUserCrud,
       weatherLat: updated.weatherLat ?? null,
       weatherLon: updated.weatherLon ?? null,
       weatherLocationName: updated.weatherLocationName ?? null,
+      weatherIconSet: parsedWeatherIconSet,
       calendarConfigs: parsedCalendars,
     });
   } catch (error) {
@@ -176,6 +200,7 @@ export async function PATCH(request: NextRequest) {
       message.includes("weather_lat") ||
       message.includes("weather_lon") ||
       message.includes("weather_location_name") ||
+      message.includes("weather_icon_set") ||
       message.includes("calendar_configs") ||
       message.includes("does not exist") ||
       message.includes("column");
