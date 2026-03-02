@@ -3,11 +3,25 @@ import type { AdapterUser } from "next-auth/adapters";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import path from "path";
+import fs from "fs";
 import { prisma } from "./db/prisma";
 import { getAppConfig } from "./app-config";
 import type { UserRole, UserStatus } from "@prisma/client";
 
 const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
+
+// #region agent log
+function _dbg(location: string, message: string, data: Record<string, unknown>, hypothesisId: string) {
+  try {
+    const logPath = path.join(process.cwd(), ".cursor", "debug-da6607.log");
+    const line = JSON.stringify({ sessionId: "da6607", location, message, data, timestamp: Date.now(), hypothesisId }) + "\n";
+    fs.appendFileSync(logPath, line);
+  } catch {
+    /* noop */
+  }
+}
+// #endregion
 
 function parseNameToFirstLast(name: string | null | undefined): {
   firstName: string | null;
@@ -27,85 +41,30 @@ export const authOptions = {
     ...baseAdapter,
     async getUserByEmail(email: string) {
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:getUserByEmail:entry",
-          message: "getUserByEmail called",
-          data: { email },
-          timestamp: Date.now(),
-          hypothesisId: "H3,H4",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:getUserByEmail:entry", "getUserByEmail called", { email }, "H3,H4");
       // #endregion
       const user = await prisma.user.findFirst({
         where: { email: { equals: email, mode: "insensitive" } },
       });
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:getUserByEmail:exit",
-          message: "getUserByEmail result",
-          data: { email, userFound: !!user },
-          timestamp: Date.now(),
-          hypothesisId: "H3,H4",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:getUserByEmail:exit", "getUserByEmail result", { email, userFound: !!user }, "H3,H4");
       // #endregion
       return user;
     },
     async createUser(data: Omit<AdapterUser, "id">) {
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:createUser:entry",
-          message: "createUser called",
-          data: { email: data.email },
-          timestamp: Date.now(),
-          hypothesisId: "H3,H5",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:createUser:entry", "createUser called", { email: data.email }, "H3,H5");
       // #endregion
       const config = await getAppConfig();
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:createUser:config",
-          message: "createUser config",
-          data: { allowAccountCreation: config.allowAccountCreation },
-          timestamp: Date.now(),
-          hypothesisId: "H1,H5",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:createUser:config", "createUser config", { allowAccountCreation: config.allowAccountCreation }, "H1,H5");
       // #endregion
       const userCount = await prisma.user.count();
       const { firstName, lastName } = parseNameToFirstLast(data.name ?? undefined);
 
       if (userCount === 0) {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:createUser:firstUser",
-            message: "createUser first user path",
-            data: { email: data.email },
-            timestamp: Date.now(),
-            hypothesisId: "H3",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:createUser:firstUser", "createUser first user path", { email: data.email }, "H3");
         // #endregion
         const user = await prisma.user.create({
           data: {
@@ -133,18 +92,7 @@ export const authOptions = {
 
       if (!config.allowAccountCreation) {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:createUser:throw",
-            message: "createUser throwing ACCOUNT_CREATION_DISABLED",
-            data: { email: data.email },
-            timestamp: Date.now(),
-            hypothesisId: "H5",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:createUser:throw", "createUser throwing ACCOUNT_CREATION_DISABLED", { email: data.email }, "H5");
         // #endregion
         const err = new Error(ACCOUNT_CREATION_DISABLED_ERROR) as Error & { code?: string };
         err.code = "ACCOUNT_CREATION_DISABLED";
@@ -156,35 +104,13 @@ export const authOptions = {
       });
       if (existing) {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:createUser:existing",
-            message: "createUser returning existing user",
-            data: { email: data.email },
-            timestamp: Date.now(),
-            hypothesisId: "H3,H4",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:createUser:existing", "createUser returning existing user", { email: data.email }, "H3,H4");
         // #endregion
         return existing as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
       }
 
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:createUser:newUser",
-          message: "createUser creating new pending user",
-          data: { email: data.email },
-          timestamp: Date.now(),
-          hypothesisId: "H3",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:createUser:newUser", "createUser creating new pending user", { email: data.email }, "H3");
       // #endregion
       const user = await prisma.user.create({
         data: {
@@ -202,33 +128,11 @@ export const authOptions = {
     },
     async linkAccount(account: Parameters<typeof baseAdapter.linkAccount>[0]) {
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:linkAccount:entry",
-          message: "linkAccount called",
-          data: { userId: account.userId, provider: account.provider },
-          timestamp: Date.now(),
-          hypothesisId: "H4",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:linkAccount:entry", "linkAccount called", { userId: account.userId, provider: account.provider }, "H4");
       // #endregion
       const result = await baseAdapter.linkAccount!(account);
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:linkAccount:exit",
-          message: "linkAccount completed",
-          data: { userId: account.userId },
-          timestamp: Date.now(),
-          hypothesisId: "H4",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:linkAccount:exit", "linkAccount completed", { userId: account.userId }, "H4");
       // #endregion
       return result;
     },
@@ -272,33 +176,11 @@ export const authOptions = {
   callbacks: {
     async signIn({ user }) {
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:signIn:entry",
-          message: "signIn callback",
-          data: { userId: user?.id, email: user?.email },
-          timestamp: Date.now(),
-          hypothesisId: "H6",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:signIn:entry", "signIn callback", { userId: user?.id, email: user?.email }, "H6");
       // #endregion
       if (!user?.id) {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:signIn:noUserId",
-            message: "signIn returning false: no user.id",
-            data: {},
-            timestamp: Date.now(),
-            hypothesisId: "H6",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:signIn:noUserId", "signIn returning false: no user.id", {}, "H6");
         // #endregion
         return false;
       }
@@ -307,50 +189,17 @@ export const authOptions = {
         select: { status: true },
       });
       // #region agent log
-      fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-        body: JSON.stringify({
-          sessionId: "da6607",
-          location: "lib/auth.ts:signIn:dbUser",
-          message: "signIn dbUser lookup",
-          data: { userId: user.id, dbUserFound: !!dbUser, status: dbUser?.status ?? null },
-          timestamp: Date.now(),
-          hypothesisId: "H6",
-        }),
-      }).catch(() => {});
+      _dbg("lib/auth.ts:signIn:dbUser", "signIn dbUser lookup", { userId: user.id, dbUserFound: !!dbUser, status: dbUser?.status ?? null }, "H6");
       // #endregion
       if (!dbUser) {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:signIn:noDbUser",
-            message: "signIn returning false: dbUser not found",
-            data: { userId: user.id },
-            timestamp: Date.now(),
-            hypothesisId: "H6",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:signIn:noDbUser", "signIn returning false: dbUser not found", { userId: user.id }, "H6");
         // #endregion
         return false;
       }
       if (dbUser.status === "inactive") {
         // #region agent log
-        fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "da6607" },
-          body: JSON.stringify({
-            sessionId: "da6607",
-            location: "lib/auth.ts:signIn:inactive",
-            message: "signIn returning false: user inactive",
-            data: { userId: user.id },
-            timestamp: Date.now(),
-            hypothesisId: "H6",
-          }),
-        }).catch(() => {});
+        _dbg("lib/auth.ts:signIn:inactive", "signIn returning false: user inactive", { userId: user.id }, "H6");
         // #endregion
         return false;
       }
