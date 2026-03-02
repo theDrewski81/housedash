@@ -127,13 +127,28 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      if (!user?.id) return false;
-      const dbUser = await prisma.user.findUnique({
-        where: { id: user.id },
-        select: { status: true },
-      });
-      if (!dbUser) return false;
-      if (dbUser.status === "inactive") return false;
+      // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
+      // Look up by id first; if no id, fall back to email for manually added users.
+      let dbUser: { status: UserStatus | null } | null = null;
+      if (user?.id) {
+        dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { status: true },
+        });
+      }
+      if (!dbUser && user?.email) {
+        dbUser = await prisma.user.findFirst({
+          where: { email: { equals: user.email, mode: "insensitive" } },
+          select: { status: true },
+        });
+      }
+      if (!dbUser) {
+        // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
+        return true;
+      }
+      if (dbUser.status === "inactive") {
+        return false;
+      }
       if (dbUser.status === "pending_approval") return "/login/pending";
       return true;
     },
