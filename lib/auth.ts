@@ -1,9 +1,11 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { UserRole, UserStatus } from "@prisma/client";
+import fs from "fs";
 import { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import path from "path";
 import { getAppConfig } from "./app-config";
 import { prisma } from "./db/prisma";
 
@@ -109,6 +111,24 @@ export const authOptions = {
       },
       async authorize(credentials) {
         let token = credentials?.token;
+        // #region agent log
+        try {
+          const envLen = process.env.KIOSK_TOKEN?.length ?? 0;
+          const logPath = path.join(process.cwd(), ".cursor", "debug-5e0118.log");
+          const dir = path.dirname(logPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.appendFileSync(logPath, JSON.stringify({
+            sessionId: "5e0118", hypothesisId: "H2,H3", location: "lib/auth.ts:authorize",
+            message: "authorize entry", data: {
+              tokenLen: typeof token === "string" ? token.length : 0,
+              tokenHasSpace: typeof token === "string" && token.includes(" "),
+              tokenHasPlus: typeof token === "string" && token.includes("+"),
+              envLen,
+              tokenMatchesEnv: token === process.env.KIOSK_TOKEN,
+            }, timestamp: Date.now(),
+          }) + "\n");
+        } catch { /* noop */ }
+        // #endregion
         // application/x-www-form-urlencoded decodes + as space; base64 tokens use +. Restore before compare.
         if (typeof token === "string" && token.includes(" ")) {
           token = token.replace(/ /g, "+");

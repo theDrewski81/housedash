@@ -28,6 +28,19 @@ function LoginContent() {
   }, [status, router]);
 
   useEffect(() => {
+    // #region agent log
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    if (search.includes("kiosk=")) {
+      fetch("/api/debug-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "5e0118", hypothesisId: "H4", location: "app/login/page.tsx:useEffect",
+          message: "effect run", data: { isTablet, kioskAttempted: kioskAttempted.current }, timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+    }
+    // #endregion
     // Kiosk only on tablet; phones get standard mobile (Google sign-in only)
     if (!isTablet || kioskAttempted.current) return;
 
@@ -51,6 +64,21 @@ function LoginContent() {
       kioskAttempted.current = true;
       // Encode token so + survives application/x-www-form-urlencoded (which decodes + as space)
       const tokenForForm = encodeURIComponent(kioskToken);
+      // #region agent log
+      fetch("/api/debug-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "5e0118", hypothesisId: "H1,H4,H5", location: "app/login/page.tsx:useEffect",
+          message: "before signIn", data: {
+            kioskTokenLen: kioskToken?.length,
+            kioskTokenHasPlus: kioskToken?.includes("+"),
+            tokenForFormHasPercent2B: tokenForForm?.includes("%2B"),
+            isTablet,
+          }, timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       signIn("kiosk", {
         token: tokenForForm,
         callbackUrl: "/dashboard",
