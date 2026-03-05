@@ -46,9 +46,9 @@ function LoginContent() {
 
     // URLSearchParams decodes + as space; base64 tokens often contain +. Parse manually.
     let kioskToken: string | null = null;
-    const search = typeof window !== "undefined" ? window.location.search.slice(1) : "";
-    if (search) {
-      for (const pair of search.split("&")) {
+    const queryString = search ? search.slice(1) : "";
+    if (queryString) {
+      for (const pair of queryString.split("&")) {
         const eq = pair.indexOf("=");
         if (eq > 0 && pair.slice(0, eq) === "kiosk") {
           kioskToken = decodeURIComponent(pair.slice(eq + 1));
