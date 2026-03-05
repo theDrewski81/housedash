@@ -26,16 +26,6 @@ function _debugLog(loc: string, msg: string, data: Record<string, unknown>) {
     }).catch(() => {});
   }
 }
-function _agentLog(msg: string, data: Record<string, unknown>, hypothesisId: string) {
-  const payload = JSON.stringify({ sessionId: "1bfcef", location: "lib/auth.ts:authorize", message: msg, data, timestamp: Date.now(), hypothesisId });
-  try {
-    const dir = path.join(process.cwd(), ".cursor");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(path.join(dir, "debug-1bfcef.log"), payload + "\n");
-  } catch {
-    /* ignore */
-  }
-}
 // #endregion
 
 function parseNameToFirstLast(name: string | null | undefined): {
@@ -139,23 +129,14 @@ export const authOptions = {
       async authorize(credentials) {
         const token = credentials?.token;
         _debugLog("lib/auth.ts:authorize", "authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 });
-        // #region agent log
-        _agentLog("authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 }, "H1,H4");
-        // #endregion
         if (!token || token !== process.env.KIOSK_TOKEN) {
           _debugLog("lib/auth.ts:authorize", "authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN });
-          // #region agent log
-          _agentLog("authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN, hasToken: !!token, hasEnvToken: !!process.env.KIOSK_TOKEN }, "H1");
-          // #endregion
           return null;
         }
         let user = await prisma.user.findFirst({
           where: { kioskToken: token },
         });
         _debugLog("lib/auth.ts:authorize", "authorize user lookup", { userFound: !!user, userId: user?.id });
-        // #region agent log
-        _agentLog("authorize user lookup", { userFound: !!user, userId: user?.id, status: user?.status }, "H2");
-        // #endregion
         if (!user) {
           try {
             user = await prisma.user.create({
@@ -171,9 +152,6 @@ export const authOptions = {
           } catch (err: unknown) {
             const prismaErr = err as { code?: string };
             _debugLog("lib/auth.ts:authorize", "authorize create error", { code: prismaErr.code });
-            // #region agent log
-            _agentLog("authorize create error", { code: prismaErr.code, message: String((err as Error).message) }, "H3");
-            // #endregion
             if (prismaErr.code === "P2002") {
               const existing = await prisma.user.findFirst({
                 where: { email: "kiosk@household.local" },
@@ -186,19 +164,11 @@ export const authOptions = {
                 _debugLog("lib/auth.ts:authorize", "authorize user updated", { userId: user.id });
               }
             }
-            if (!user) {
-              // #region agent log
-              _agentLog("authorize create failed, returning null", {}, "H3");
-              // #endregion
-              return null;
-            }
+            if (!user) return null;
           }
         }
         if (user.status !== "active") {
           _debugLog("lib/auth.ts:authorize", "authorize user inactive", { status: user.status });
-          // #region agent log
-          _agentLog("authorize user inactive", { status: user.status }, "H2");
-          // #endregion
           return null;
         }
         _debugLog("lib/auth.ts:authorize", "authorize success", { userId: user.id });

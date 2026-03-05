@@ -49,14 +49,6 @@ function LoginContent() {
 
     if (kioskToken) {
       kioskAttempted.current = true;
-      // #region agent log
-      fetch("/api/debug-log", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: "98863f", location: "app/login/page.tsx", message: "kiosk signIn attempt", data: { tokenLen: kioskToken.length, isTablet }, timestamp: Date.now(), hypothesisId: "client" }),
-      }).catch(() => {});
-      fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "1bfcef", location: "app/login/page.tsx", message: "kiosk signIn attempt", data: { tokenLen: kioskToken.length, isTablet, hasKioskParam: !!urlParams.get("kiosk") }, timestamp: Date.now(), hypothesisId: "H5" }) }).catch(() => {});
-      // #endregion
       signIn("kiosk", {
         token: kioskToken,
         callbackUrl: "/dashboard",

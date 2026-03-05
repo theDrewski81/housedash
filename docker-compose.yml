@@ -43,8 +43,6 @@ services:
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
-    volumes:
-      - ./.cursor:/app/.cursor
     environment:
       # Database
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-housedash}?schema=public
