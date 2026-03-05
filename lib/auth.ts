@@ -12,18 +12,15 @@ import { prisma } from "./db/prisma";
 const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
 
 // #region agent log
+const _debugSessionId = "b1fa97";
 function _debugLog(loc: string, msg: string, data: Record<string, unknown>) {
-  const payload = JSON.stringify({ sessionId: "98863f", location: loc, message: msg, data, timestamp: Date.now() });
+  const payload = JSON.stringify({ sessionId: _debugSessionId, location: loc, message: msg, data, timestamp: Date.now() });
   try {
     const dir = path.join(process.cwd(), ".cursor");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(path.join(dir, "debug-98863f.log"), payload + "\n");
+    fs.appendFileSync(path.join(dir, `debug-${_debugSessionId}.log`), payload + "\n");
   } catch {
-    fetch("http://127.0.0.1:7535/ingest/0a41af39-9358-404e-8158-0ae7cebbf411", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "98863f" },
-      body: payload,
-    }).catch(() => {});
+    /* file-based only; no fetch to 127.0.0.1 (fails from Docker/tablet) */
   }
 }
 // #endregion
@@ -128,9 +125,18 @@ export const authOptions = {
       },
       async authorize(credentials) {
         const token = credentials?.token;
-        _debugLog("lib/auth.ts:authorize", "authorize entry", { hasToken: !!token, tokenLen: token?.length ?? 0, hasEnvToken: !!process.env.KIOSK_TOKEN, envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0 });
+        _debugLog("lib/auth.ts:authorize", "authorize entry", {
+          hasToken: !!token,
+          tokenLen: token?.length ?? 0,
+          hasSpace: token?.includes(" ") ?? false,
+          hasPlus: token?.includes("+") ?? false,
+          hasEnvToken: !!process.env.KIOSK_TOKEN,
+          envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0,
+          tokenMatch: token === process.env.KIOSK_TOKEN,
+          hypothesisId: "H1",
+        });
         if (!token || token !== process.env.KIOSK_TOKEN) {
-          _debugLog("lib/auth.ts:authorize", "authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN });
+          _debugLog("lib/auth.ts:authorize", "authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN, hypothesisId: "H1" });
           return null;
         }
         let user = await prisma.user.findFirst({

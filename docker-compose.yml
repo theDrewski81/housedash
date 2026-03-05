@@ -67,6 +67,8 @@ services:
       
       # Node Environment
       NODE_ENV: production
+    volumes:
+      - ./.cursor:/app/.cursor
     depends_on:
       postgres:
         condition: service_healthy

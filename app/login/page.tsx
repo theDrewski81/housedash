@@ -48,6 +48,27 @@ function LoginContent() {
     }
 
     if (kioskToken) {
+      // #region agent log
+      fetch("/api/debug-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "b1fa97",
+          location: "app/login/page.tsx:useEffect",
+          message: "kiosk before signIn",
+          data: {
+            rawSearchLen: search?.length ?? 0,
+            tokenLen: kioskToken?.length ?? 0,
+            hasPlus: kioskToken?.includes("+") ?? false,
+            hasSpace: kioskToken?.includes(" ") ?? false,
+            firstChar: kioskToken?.[0] ?? "",
+            lastChar: kioskToken?.slice(-1) ?? "",
+            hypothesisId: "H2",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       kioskAttempted.current = true;
       signIn("kiosk", {
         token: kioskToken,
