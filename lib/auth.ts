@@ -4,26 +4,10 @@ import { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import fs from "fs";
-import path from "path";
 import { getAppConfig } from "./app-config";
 import { prisma } from "./db/prisma";
 
 const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
-
-// #region agent log
-const _debugSessionId = "b1fa97";
-function _debugLog(loc: string, msg: string, data: Record<string, unknown>) {
-  const payload = JSON.stringify({ sessionId: _debugSessionId, location: loc, message: msg, data, timestamp: Date.now() });
-  try {
-    const dir = path.join(process.cwd(), ".cursor");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.appendFileSync(path.join(dir, `debug-${_debugSessionId}.log`), payload + "\n");
-  } catch {
-    /* file-based only; no fetch to 127.0.0.1 (fails from Docker/tablet) */
-  }
-}
-// #endregion
 
 function parseNameToFirstLast(name: string | null | undefined): {
   firstName: string | null;
@@ -129,24 +113,12 @@ export const authOptions = {
         if (typeof token === "string" && token.includes(" ")) {
           token = token.replace(/ /g, "+");
         }
-        _debugLog("lib/auth.ts:authorize", "authorize entry", {
-          hasToken: !!token,
-          tokenLen: token?.length ?? 0,
-          hasSpace: token?.includes(" ") ?? false,
-          hasPlus: token?.includes("+") ?? false,
-          hasEnvToken: !!process.env.KIOSK_TOKEN,
-          envTokenLen: process.env.KIOSK_TOKEN?.length ?? 0,
-          tokenMatch: token === process.env.KIOSK_TOKEN,
-          hypothesisId: "H1",
-        });
         if (!token || token !== process.env.KIOSK_TOKEN) {
-          _debugLog("lib/auth.ts:authorize", "authorize token mismatch", { tokenMatch: token === process.env.KIOSK_TOKEN, hypothesisId: "H1" });
           return null;
         }
         let user = await prisma.user.findFirst({
           where: { kioskToken: token },
         });
-        _debugLog("lib/auth.ts:authorize", "authorize user lookup", { userFound: !!user, userId: user?.id });
         if (!user) {
           try {
             user = await prisma.user.create({
@@ -158,10 +130,8 @@ export const authOptions = {
                 role: "user",
               },
             });
-            _debugLog("lib/auth.ts:authorize", "authorize user created", { userId: user.id });
           } catch (err: unknown) {
             const prismaErr = err as { code?: string };
-            _debugLog("lib/auth.ts:authorize", "authorize create error", { code: prismaErr.code });
             if (prismaErr.code === "P2002") {
               const existing = await prisma.user.findFirst({
                 where: { email: "kiosk@household.local" },
@@ -171,17 +141,14 @@ export const authOptions = {
                   where: { id: existing.id },
                   data: { kioskToken: token },
                 });
-                _debugLog("lib/auth.ts:authorize", "authorize user updated", { userId: user.id });
               }
             }
             if (!user) return null;
           }
         }
         if (user.status !== "active") {
-          _debugLog("lib/auth.ts:authorize", "authorize user inactive", { status: user.status });
           return null;
         }
-        _debugLog("lib/auth.ts:authorize", "authorize success", { userId: user.id });
         return {
           id: user.id,
           email: user.email,
@@ -196,7 +163,6 @@ export const authOptions = {
       // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
       // Look up by id first; if no id, fall back to email for manually added users.
       let dbUser: { status: UserStatus | null } | null = null;
-      _debugLog("lib/auth.ts:signIn", "signIn entry", { userId: user?.id, email: user?.email });
       if (user?.id) {
         dbUser = await prisma.user.findUnique({
           where: { id: user.id },
@@ -206,24 +172,19 @@ export const authOptions = {
       if (!dbUser && user?.email) {
         dbUser = await prisma.user.findFirst({
           where: { email: { equals: user.email, mode: "insensitive" } },
-          select: { status: true },
-        });
+        select: { status: true },
+      });
       }
-      _debugLog("lib/auth.ts:signIn", "signIn dbUser", { found: !!dbUser, status: dbUser?.status });
       if (!dbUser) {
         // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
-        _debugLog("lib/auth.ts:signIn", "signIn no dbUser, allow", {});
         return true;
       }
       if (dbUser.status === "inactive") {
-        _debugLog("lib/auth.ts:signIn", "signIn inactive, reject", {});
         return false;
       }
       if (dbUser.status === "pending_approval") {
-        _debugLog("lib/auth.ts:signIn", "signIn pending_approval", {});
         return "/login/pending";
       }
-      _debugLog("lib/auth.ts:signIn", "signIn allow", {});
       return true;
     },
     async redirect({ url, baseUrl }) {
