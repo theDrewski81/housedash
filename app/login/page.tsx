@@ -70,8 +70,10 @@ function LoginContent() {
       }).catch(() => {});
       // #endregion
       kioskAttempted.current = true;
+      // Encode token so + survives application/x-www-form-urlencoded (which decodes + as space)
+      const tokenForForm = encodeURIComponent(kioskToken);
       signIn("kiosk", {
-        token: kioskToken,
+        token: tokenForForm,
         callbackUrl: "/dashboard",
         redirect: true,
       }).then((res) => {
