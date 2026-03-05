@@ -124,7 +124,11 @@ export const authOptions = {
         token: { label: "Kiosk token", type: "password" },
       },
       async authorize(credentials) {
-        const token = credentials?.token;
+        let token = credentials?.token;
+        // application/x-www-form-urlencoded decodes + as space; base64 tokens use +. Restore before compare.
+        if (typeof token === "string" && token.includes(" ")) {
+          token = token.replace(/ /g, "+");
+        }
         _debugLog("lib/auth.ts:authorize", "authorize entry", {
           hasToken: !!token,
           tokenLen: token?.length ?? 0,
