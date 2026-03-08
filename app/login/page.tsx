@@ -28,15 +28,15 @@ function LoginContent() {
   }, [status, router]);
 
   useEffect(() => {
-    // #region agent log
     const search = typeof window !== "undefined" ? window.location.search : "";
-    if (search.includes("kiosk=")) {
-      fetch("/api/debug-log", {
+    // #region agent log
+    if (search.includes("kiosk=") || search.includes("kiosk")) {
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
         body: JSON.stringify({
-          sessionId: "5e0118", hypothesisId: "H4", location: "app/login/page.tsx:useEffect",
-          message: "effect run", data: { isTablet, kioskAttempted: kioskAttempted.current }, timestamp: Date.now(),
+          sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "effect run",
+          data: { isTablet, kioskAttempted: kioskAttempted.current, search: search.slice(0, 80) }, hypothesisId: "H3", timestamp: Date.now(),
         }),
       }).catch(() => {});
     }
@@ -62,20 +62,14 @@ function LoginContent() {
 
     if (kioskToken) {
       kioskAttempted.current = true;
-      // Encode token so + survives application/x-www-form-urlencoded (which decodes + as space)
       const tokenForForm = encodeURIComponent(kioskToken);
       // #region agent log
-      fetch("/api/debug-log", {
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
         body: JSON.stringify({
-          sessionId: "5e0118", hypothesisId: "H1,H4,H5", location: "app/login/page.tsx:useEffect",
-          message: "before signIn", data: {
-            kioskTokenLen: kioskToken?.length,
-            kioskTokenHasPlus: kioskToken?.includes("+"),
-            tokenForFormHasPercent2B: tokenForForm?.includes("%2B"),
-            isTablet,
-          }, timestamp: Date.now(),
+          sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "before signIn",
+          data: { kioskTokenLen: kioskToken?.length, tokenForFormLen: tokenForForm?.length, isTablet }, hypothesisId: "H1,H3", timestamp: Date.now(),
         }),
       }).catch(() => {});
       // #endregion
@@ -84,6 +78,16 @@ function LoginContent() {
         callbackUrl: "/dashboard",
         redirect: true,
       }).then((res) => {
+        // #region agent log
+        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
+          body: JSON.stringify({
+            sessionId: "146b76", location: "app/login/page.tsx:signIn.then", message: "signIn result",
+            data: { ok: res?.ok, error: res?.error, status: res?.status, url: res?.url?.slice(0, 60) }, hypothesisId: "H4,H5", timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         if (res?.ok) {
           localStorage.setItem("kioskToken", kioskToken);
         }

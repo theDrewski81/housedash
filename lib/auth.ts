@@ -1,11 +1,9 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { UserRole, UserStatus } from "@prisma/client";
-import fs from "fs";
 import { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
-import path from "path";
 import { getAppConfig } from "./app-config";
 import { prisma } from "./db/prisma";
 
@@ -115,34 +113,43 @@ export const authOptions = {
       async authorize(credentials) {
         let token = credentials?.token;
         // #region agent log
-        try {
-          const envLen = process.env.KIOSK_TOKEN?.length ?? 0;
-          const logPath = path.join(process.cwd(), ".cursor", "debug-5e0118.log");
-          const dir = path.dirname(logPath);
-          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-          fs.appendFileSync(logPath, JSON.stringify({
-            sessionId: "5e0118", hypothesisId: "H2,H3", location: "lib/auth.ts:authorize",
-            message: "authorize entry", data: {
-              tokenLen: typeof token === "string" ? token.length : 0,
-              tokenHasSpace: typeof token === "string" && token.includes(" "),
-              tokenHasPlus: typeof token === "string" && token.includes("+"),
-              envLen,
-              tokenMatchesEnv: token === process.env.KIOSK_TOKEN,
-            }, timestamp: Date.now(),
-          }) + "\n");
-        } catch { /* noop */ }
+        const logIngest = (message: string, data: Record<string, unknown>, hypothesisId: string) => {
+          fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
+            body: JSON.stringify({ sessionId: "146b76", location: "lib/auth.ts:authorize", message, data, hypothesisId, timestamp: Date.now() }),
+          }).catch(() => {});
+        };
+        logIngest("authorize entry", {
+          tokenLen: typeof token === "string" ? token.length : 0,
+          tokenHasSpace: typeof token === "string" && token.includes(" "),
+          envLen: process.env.KIOSK_TOKEN?.length ?? 0,
+        }, "H1,H2");
         // #endregion
         // application/x-www-form-urlencoded decodes + as space; base64 tokens use +. Restore before compare.
         if (typeof token === "string" && token.includes(" ")) {
           token = token.replace(/ /g, "+");
         }
+        const tokenMatches = !!(token && process.env.KIOSK_TOKEN && token === process.env.KIOSK_TOKEN);
+        // #region agent log
+        logIngest("after token fix", { tokenMatches, hasToken: !!token, hasEnv: !!process.env.KIOSK_TOKEN }, "H1");
+        // #endregion
         if (!token || token !== process.env.KIOSK_TOKEN) {
+          // #region agent log
+          logIngest("authorize return null", { reason: "token_invalid" }, "H1");
+          // #endregion
           return null;
         }
         let user = await prisma.user.findFirst({
           where: { kioskToken: token },
         });
+        // #region agent log
+        logIngest("after findFirst", { userFound: !!user, userId: user?.id, status: user?.status }, "H2");
+        // #endregion
         if (!user) {
+          // #region agent log
+          logIngest("creating kiosk user", {}, "H2");
+          // #endregion
           try {
             user = await prisma.user.create({
               data: {
@@ -153,8 +160,14 @@ export const authOptions = {
                 role: "user",
               },
             });
+            // #region agent log
+            logIngest("kiosk user created", { userId: user.id, status: user.status }, "H2");
+            // #endregion
           } catch (err: unknown) {
             const prismaErr = err as { code?: string };
+            // #region agent log
+            logIngest("create failed", { code: prismaErr.code }, "H2");
+            // #endregion
             if (prismaErr.code === "P2002") {
               const existing = await prisma.user.findFirst({
                 where: { email: "kiosk@household.local" },
@@ -164,14 +177,28 @@ export const authOptions = {
                   where: { id: existing.id },
                   data: { kioskToken: token },
                 });
+                // #region agent log
+                logIngest("kiosk user updated (P2002)", { userId: user.id, status: user.status }, "H2");
+                // #endregion
               }
             }
-            if (!user) return null;
+            if (!user) {
+              // #region agent log
+              logIngest("authorize return null", { reason: "create_failed" }, "H2");
+              // #endregion
+              return null;
+            }
           }
         }
         if (user.status !== "active") {
+          // #region agent log
+          logIngest("authorize return null", { reason: "status_not_active", status: user.status }, "H2");
+          // #endregion
           return null;
         }
+        // #region agent log
+        logIngest("authorize return user", { userId: user.id }, "H2");
+        // #endregion
         return {
           id: user.id,
           email: user.email,
@@ -182,7 +209,17 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
+      // #region agent log
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
+        body: JSON.stringify({
+          sessionId: "146b76", location: "lib/auth.ts:signIn", message: "signIn callback entry",
+          data: { userId: user?.id, email: user?.email, provider: account?.provider }, hypothesisId: "H4", timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
       // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
       // Look up by id first; if no id, fall back to email for manually added users.
       let dbUser: { status: UserStatus | null } | null = null;
@@ -198,17 +235,30 @@ export const authOptions = {
         select: { status: true },
       });
       }
-      if (!dbUser) {
-        // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
+      const result = (() => {
+        if (!dbUser) {
+          // New user (not in DB): allow so adapter can createUser; createUser enforces allowAccountCreation
+          return true;
+        }
+        if (dbUser.status === "inactive") {
+          return false;
+        }
+        if (dbUser.status === "pending_approval") {
+          return "/login/pending";
+        }
         return true;
-      }
-      if (dbUser.status === "inactive") {
-        return false;
-      }
-      if (dbUser.status === "pending_approval") {
-        return "/login/pending";
-      }
-      return true;
+      })();
+      // #region agent log
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
+        body: JSON.stringify({
+          sessionId: "146b76", location: "lib/auth.ts:signIn", message: "signIn callback result",
+          data: { dbUserFound: !!dbUser, status: dbUser?.status, result: result === true ? true : result === false ? false : String(result) }, hypothesisId: "H4", timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+      return result;
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`;
