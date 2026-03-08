@@ -213,6 +213,8 @@ export const authOptions = {
           email: user.email,
           name: user.name ?? undefined,
           image: user.image ?? undefined,
+          role: user.role ?? undefined,
+          status: user.status ?? undefined,
         };
       },
     }),
@@ -270,14 +272,35 @@ export const authOptions = {
       if (new URL(url).origin === baseUrl) return url;
       return baseUrl + "/dashboard";
     },
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user?.id ?? (session.user as { id?: string }).id;
+    async jwt({ token, user, account }) {
+      // On sign-in, persist user id and (if available) role/status to the token
+      if (user) {
+        token.userId = (user as { id?: string }).id;
         const u = user as { role?: UserRole; status?: UserStatus };
-        if (u?.role != null) (session.user as { role?: UserRole }).role = u.role;
-        if (u?.status != null) (session.user as { status?: UserStatus }).status = u.status;
-        // If this is the only user in the system, treat as admin so they can access admin and set their role
-        if ((session.user as { role?: UserRole }).role !== "admin" && user?.id) {
+        if (u?.role != null) token.role = u.role;
+        if (u?.status != null) token.status = u.status;
+        // If from OAuth, user may not have role/status; look up from DB
+        if (token.role == null || token.status == null) {
+          const dbUser = token.userId
+            ? await prisma.user.findUnique({ where: { id: token.userId }, select: { role: true, status: true } })
+            : (user as { email?: string }).email
+              ? await prisma.user.findFirst({ where: { email: { equals: (user as { email: string }).email, mode: "insensitive" } }, select: { role: true, status: true } })
+              : null;
+          if (dbUser) {
+            if (token.role == null) token.role = dbUser.role ?? undefined;
+            if (token.status == null) token.status = dbUser.status ?? undefined;
+          }
+        }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = (token.userId as string) ?? (token.sub as string);
+        if (token.role != null) (session.user as { role?: UserRole }).role = token.role as UserRole;
+        if (token.status != null) (session.user as { status?: UserStatus }).status = token.status as UserStatus;
+        // If this is the only user in the system, treat as admin
+        if ((session.user as { role?: UserRole }).role !== "admin" && session.user.id) {
           const userCount = await prisma.user.count();
           if (userCount === 1) {
             (session.user as { role?: UserRole }).role = "admin";
@@ -292,7 +315,7 @@ export const authOptions = {
     error: "/login",
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
     maxAge: SESSION_MAX_AGE_SECONDS,
     updateAge: 0, // Expire 14 days from login, do not extend on activity
   },
