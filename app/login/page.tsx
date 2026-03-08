@@ -29,9 +29,28 @@ function LoginContent() {
 
   useEffect(() => {
     const search = typeof window !== "undefined" ? window.location.search : "";
+    const viewportW = typeof window !== "undefined" ? window.innerWidth : 0;
+    const viewportH = typeof window !== "undefined" ? window.innerHeight : 0;
+    const tabletMinWidth = 768;
+    const meetsKioskRequirements = viewportW >= tabletMinWidth;
     // #region agent log
     if (search.includes("kiosk=") || search.includes("kiosk")) {
-      const payload = { sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "effect run", data: { isTablet, kioskAttempted: kioskAttempted.current, search: search.slice(0, 80) }, hypothesisId: "H3", timestamp: Date.now() };
+      const payload = {
+        sessionId: "146b76",
+        location: "app/login/page.tsx:useEffect",
+        message: "effect run",
+        data: {
+          viewportWidth: viewportW,
+          viewportHeight: viewportH,
+          meetsKioskRequirements,
+          tabletMinWidth,
+          isTablet,
+          kioskAttempted: kioskAttempted.current,
+          search: search.slice(0, 80),
+        },
+        hypothesisId: "H3",
+        timestamp: Date.now(),
+      };
       fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
       fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(payload) }).catch(() => {});
     }
@@ -59,7 +78,22 @@ function LoginContent() {
       kioskAttempted.current = true;
       const tokenForForm = encodeURIComponent(kioskToken);
       // #region agent log
-      const beforePayload = { sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "before signIn", data: { kioskTokenLen: kioskToken?.length, tokenForFormLen: tokenForForm?.length, isTablet }, hypothesisId: "H1,H3", timestamp: Date.now() };
+      const beforePayload = {
+        sessionId: "146b76",
+        location: "app/login/page.tsx:useEffect",
+        message: "before signIn",
+        data: {
+          viewportWidth: viewportW,
+          viewportHeight: viewportH,
+          meetsKioskRequirements,
+          tabletMinWidth,
+          isTablet,
+          kioskTokenLen: kioskToken?.length,
+          tokenForFormLen: tokenForForm?.length,
+        },
+        hypothesisId: "H1,H3",
+        timestamp: Date.now(),
+      };
       fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(beforePayload) }).catch(() => {});
       fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(beforePayload) }).catch(() => {});
       // #endregion
