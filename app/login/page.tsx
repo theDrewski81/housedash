@@ -27,6 +27,24 @@ function LoginContent() {
     }
   }, [status, router]);
 
+  // When kiosk login fails (error param), flush server-side kiosk auth buffer into debug log so it can be read
+  useEffect(() => {
+    if (!errorParam || !showGenericError) return;
+    fetch("/api/debug-kiosk-buffer")
+      .then((r) => r.json())
+      .then(({ payloads }: { payloads?: Record<string, unknown>[] }) => {
+        if (!Array.isArray(payloads)) return;
+        payloads.forEach((p) => {
+          fetch("/api/debug-log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(p),
+          }).catch(() => {});
+        });
+      })
+      .catch(() => {});
+  }, [errorParam, showGenericError]);
+
   useEffect(() => {
     const search = typeof window !== "undefined" ? window.location.search : "";
     const viewportW = typeof window !== "undefined" ? window.innerWidth : 0;

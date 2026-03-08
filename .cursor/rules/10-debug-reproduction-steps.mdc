@@ -1,0 +1,17 @@
+---
+description: Debug handoffs and reproduction steps must include copy/paste-ready commands
+globs:
+alwaysApply: true
+---
+
+# Debug reproduction steps (Global)
+
+When providing **Reproduction Steps** or any step-by-step instructions in a debugging context (e.g. debug handoff, follow-up directions for the user):
+
+- **Always include copy/paste-ready commands** so the user can follow the steps exactly without retyping.
+- For **deploy/restart/remote** flows: include the exact commands (e.g. `git pull`, deploy script, service restart, SSH if relevant).
+- For **local** flows: include the exact commands to run locally (e.g. `npm run dev`, `pnpm test -- path`, env vars or `.env` usage).
+- Prefer one command per step; if a step needs multiple commands, list them in order in a single copyable block.
+- Use the user’s environment (OS, shell, package manager) when known; otherwise use repo defaults and note “adjust for your OS/shell if needed.”
+
+Do not give high-level instructions like “pull and restart” without the actual commands.

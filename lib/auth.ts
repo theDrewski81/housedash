@@ -6,6 +6,7 @@ import type { AdapterUser } from "next-auth/adapters";
 import path from "path";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import { pushKioskDebugPayload } from "./debug-kiosk-buffer";
 import { getAppConfig } from "./app-config";
 import { prisma } from "./db/prisma";
 
@@ -118,6 +119,9 @@ export const authOptions = {
         const debugLogPath = path.join(process.cwd(), ".cursor", "debug-146b76.log");
         const logIngest = (message: string, data: Record<string, unknown>, hypothesisId: string) => {
           const payload = { sessionId: "146b76", location: "lib/auth.ts:authorize", message, data, hypothesisId, timestamp: Date.now() };
+          try {
+            pushKioskDebugPayload(payload);
+          } catch { /* noop */ }
           try {
             const dir = path.dirname(debugLogPath);
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -246,6 +250,9 @@ export const authOptions = {
       const signInLogPath = path.join(process.cwd(), ".cursor", "debug-146b76.log");
       const signInLog = (message: string, data: Record<string, unknown>, hypothesisId: string) => {
         const payload = { sessionId: "146b76", location: "lib/auth.ts:signIn", message, data, hypothesisId, timestamp: Date.now() };
+        try {
+          pushKioskDebugPayload(payload);
+        } catch { /* noop */ }
         try {
           const dir = path.dirname(signInLogPath);
           if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

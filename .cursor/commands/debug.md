@@ -33,7 +33,10 @@ Are results oscillating between failure modes (e.g., null ↔ too many results)?
 Did any attempt partially succeed?
 What has been RULED OUT by the attempts so far?
 Are there signs of a root cause the previous agent may have overlooked (e.g., wrong table/join, filter logic inverted, parameter binding issue, caching, environment mismatch)?
-5. Debugging Directives
+5. Reproduction Steps (copy/paste-ready)
+Provide steps the user can follow to reproduce the issue or to get to the state where the bug appears. Every step MUST include the exact, copy/paste-ready command(s)—e.g. `git pull`, deploy/restart commands, or local run commands (`npm run dev`, test commands, etc.). If directions are for running locally, include the full local commands; if for a server/deploy, include full deploy/restart/git commands. No high-level “then restart” without the actual command.
+
+6. Debugging Directives
 Execute these steps IN ORDER before making any code changes:
 
 Verify assumptions: Confirm the underlying data exists as expected. Run a raw/minimal query against the data source to validate baseline state.
@@ -43,7 +46,7 @@ Check environmental factors: Confirm connection targets (DB name, host, schema),
 Diff against working state: If a prior version worked, diff the current code against that version and account for every change.
 Do NOT skip ahead to writing a fix until steps 1-5 have been completed and their outputs are documented.
 
-6. Success Criteria
+7. Success Criteria
 Define exactly what "fixed" means:
 
  Query/operation returns: [expected result with concrete example values]
@@ -51,10 +54,10 @@ Define exactly what "fixed" means:
  Edge case B produces: [expected behavior]
  No regressions in: [related functionality]
  Verified by running: [specific test command or validation step]
-7. Constraints
+8. Constraints
 Do not reintroduce any approach already documented as failed in section 3 unless you have a specific, articulable reason why it would succeed now with a different change.
 Explain your diagnosis BEFORE proposing a fix.
-After applying a fix, run the validation from section 6 and report results before considering the task complete.
+After applying a fix, run the validation from section 7 and report results before considering the task complete.
 Reminders
 
 Pull REAL values from the conversation. Every section that says "include concrete example values" means literal copy-paste of actual data, queries, outputs, and error messages — not placeholders.
