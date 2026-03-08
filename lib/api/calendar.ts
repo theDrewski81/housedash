@@ -32,16 +32,17 @@ function getDateKeyInTimezone(date: Date, timezone: string): string {
 
 export async function getCalendarEvents(
   calendarId: string,
-  timezone = "UTC"
+  timezone = "UTC",
+  /** If provided (client "now" as ISO), use for timeMin/timeMax and next-event; otherwise use server time */
+  timeMinISO?: string
 ): Promise<ScheduleData> {
   const apiKey = process.env.GOOGLE_CALENDAR_API_KEY;
   if (!apiKey) {
     throw new Error("GOOGLE_CALENDAR_API_KEY is not set");
   }
 
-  const now = new Date();
-  const weekFromNow = new Date(now);
-  weekFromNow.setDate(weekFromNow.getDate() + 7);
+  const now = timeMinISO ? new Date(timeMinISO) : new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 86400000);
 
   const timeMin = now.toISOString();
   const timeMax = weekFromNow.toISOString();
@@ -125,14 +126,15 @@ export type CalendarConfig = { id: string; color?: string };
 /** Fetch and merge events from multiple calendars */
 export async function getCalendarEventsFromConfigs(
   configs: CalendarConfig[],
-  timezone: string
+  timezone: string,
+  timeMinISO?: string
 ): Promise<ScheduleData> {
   if (configs.length === 0) {
     return { nextEvent: null, weeklyEvents: [] };
   }
 
   const results = await Promise.allSettled(
-    configs.map((c) => getCalendarEvents(c.id, timezone))
+    configs.map((c) => getCalendarEvents(c.id, timezone, timeMinISO))
   );
 
   const weeklyEventsMap: { [key: string]: CalendarEvent[] } = {};
@@ -177,7 +179,7 @@ export async function getCalendarEventsFromConfigs(
       }),
     }));
 
-  const now = new Date();
+  const now = timeMinISO ? new Date(timeMinISO) : new Date();
   const allEvents = Object.values(weeklyEventsMap).flat().sort((a, b) => {
     const aStart = a.start.dateTime
       ? new Date(a.start.dateTime).getTime()

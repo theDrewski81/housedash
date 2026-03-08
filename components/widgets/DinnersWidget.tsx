@@ -267,8 +267,8 @@ export default function DinnersWidget({
     queryFn: async () => {
       const startDate = format(today, "yyyy-MM-dd");
       const endDate = format(addDays(today, 6), "yyyy-MM-dd");
-      // #region agent log
       const ctx = getClientTimeContext();
+      // #region agent log
       fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
@@ -283,7 +283,7 @@ export default function DinnersWidget({
       }).catch(() => {});
       // #endregion
       const res = await fetch(
-        `/api/widgets/dinners?startDate=${startDate}&endDate=${endDate}`
+        `/api/widgets/dinners?startDate=${startDate}&endDate=${endDate}&timezone=${encodeURIComponent(ctx.timezone)}`
       );
       if (!res.ok) throw new Error("Failed to fetch dinners");
       return res.json();
@@ -303,8 +303,8 @@ export default function DinnersWidget({
     queryKey: ["dinners-recent", format(today, "yyyy-MM-dd")],
     queryFn: async () => {
       const asOf = format(today, "yyyy-MM-dd");
-      // #region agent log
       const ctx = getClientTimeContext();
+      // #region agent log
       fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
@@ -318,7 +318,9 @@ export default function DinnersWidget({
         }),
       }).catch(() => {});
       // #endregion
-      const res = await fetch(`/api/widgets/dinners/recent?asOf=${asOf}`);
+      const res = await fetch(
+        `/api/widgets/dinners/recent?asOf=${asOf}&timezone=${encodeURIComponent(ctx.timezone)}`
+      );
       if (!res.ok) throw new Error("Failed to fetch recent dinners");
       return res.json();
     },

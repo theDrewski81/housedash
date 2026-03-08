@@ -20,6 +20,7 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const timezone = searchParams.get("timezone") ?? "UTC";
+    const timeMin = searchParams.get("timeMin"); // Client "now" as ISO; when set, window and next-event use client time
     const calendarIdOverride = searchParams.get("calendarId");
 
     // #region agent log
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
         sessionId: "79a07d",
         location: "app/api/widgets/schedule/route.ts",
         message: "Schedule API: timezone param and server now",
-        data: { timezone, serverNow: serverNow.toISOString() },
+        data: { timezone, serverNow: serverNow.toISOString(), timeMinUsed: !!timeMin },
         timestamp: Date.now(),
         hypothesisId: "H3",
       }),
@@ -49,7 +50,8 @@ export async function GET(request: Request) {
     ) {
       schedule = await getCalendarEventsFromConfigs(
         calendarConfigs,
-        timezone
+        timezone,
+        timeMin ?? undefined
       );
     } else {
       const calendarId =
@@ -63,7 +65,7 @@ export async function GET(request: Request) {
           { status: 500 }
         );
       }
-      schedule = await getCalendarEvents(calendarId, timezone);
+      schedule = await getCalendarEvents(calendarId, timezone, timeMin ?? undefined);
     }
 
     return NextResponse.json(schedule);

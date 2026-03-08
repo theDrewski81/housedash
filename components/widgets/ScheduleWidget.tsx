@@ -51,8 +51,9 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
     try {
       setLoading(true);
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const timeMin = new Date().toISOString();
       const response = await fetch(
-        `/api/widgets/schedule?timezone=${encodeURIComponent(timezone)}`
+        `/api/widgets/schedule?timezone=${encodeURIComponent(timezone)}&timeMin=${encodeURIComponent(timeMin)}`
       );
       const data = await response.json();
       if (!response.ok) {

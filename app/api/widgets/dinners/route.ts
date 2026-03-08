@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getHouseholdUserId } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db/prisma";
-import { parseCalendarDate } from "@/lib/date-utils";
+import {
+  parseCalendarDate,
+  getStartOfDayInTimezone,
+  getEndOfDayInTimezone,
+} from "@/lib/date-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,30 +13,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
+    const timezone = searchParams.get("timezone"); // IANA e.g. America/Los_Angeles; if set, start/end are local dates in this TZ
 
     const where: { userId: string; date?: { gte: Date; lte: Date } } = {
       userId: householdUserId,
     };
     if (startDate && endDate) {
-      // #region agent log
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
-        body: JSON.stringify({
-          sessionId: "79a07d",
-          location: "app/api/widgets/dinners/route.ts GET",
-          message: "Dinners API: range interpreted as UTC day boundaries",
-          data: { startDate, endDate, interpretation: "UTC" },
-          timestamp: Date.now(),
-          hypothesisId: "H2",
-        }),
-      }).catch(() => {});
-      // #endregion
-      // Use noon UTC for calendar-day stability; range includes full start/end days
-      where.date = {
-        gte: new Date(`${startDate}T00:00:00.000Z`),
-        lte: new Date(`${endDate}T23:59:59.999Z`),
-      };
+      if (timezone) {
+        where.date = {
+          gte: getStartOfDayInTimezone(startDate, timezone),
+          lte: getEndOfDayInTimezone(endDate, timezone),
+        };
+      } else {
+        where.date = {
+          gte: new Date(`${startDate}T00:00:00.000Z`),
+          lte: new Date(`${endDate}T23:59:59.999Z`),
+        };
+      }
     }
 
     const dinners = await prisma.dinner.findMany({
