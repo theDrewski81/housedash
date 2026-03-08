@@ -36,6 +36,22 @@ export default function WeatherWidget({ isExpanded, onExpandToggle }: WeatherWid
       const data = await response.json();
       setWeather(data);
       setError(null);
+      // #region agent log
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const firstDate = data?.forecast?.[0]?.date ?? null;
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+        body: JSON.stringify({
+          sessionId: "79a07d",
+          location: "WeatherWidget.tsx:fetchWeather",
+          message: "Weather widget: client TZ and first forecast date",
+          data: { clientTimezone: tz, firstForecastDate: firstDate, locationTimezoneOffset: data?.current?.timezone },
+          timestamp: Date.now(),
+          hypothesisId: "H4",
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load weather");
     } finally {

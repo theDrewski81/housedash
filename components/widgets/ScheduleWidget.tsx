@@ -62,6 +62,22 @@ export default function ScheduleWidget({ isExpanded, onExpandToggle }: ScheduleW
       }
       setSchedule(data);
       setError(null);
+      // #region agent log
+      const now = new Date();
+      const todayKey = now.toLocaleDateString("en-CA", { timeZone: timezone });
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+        body: JSON.stringify({
+          sessionId: "79a07d",
+          location: "ScheduleWidget.tsx:fetchSchedule",
+          message: "Schedule widget: client timezone and today",
+          data: { timezone, todayKey, nowISO: now.toISOString() },
+          timestamp: Date.now(),
+          hypothesisId: "H3",
+        }),
+      }).catch(() => {});
+      // #endregion
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load schedule");
     } finally {

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { getTimeContextComparison } from "@/lib/timezone-eval";
 import WeatherWidget from "@/components/widgets/WeatherWidget";
 import ScheduleWidget from "@/components/widgets/ScheduleWidget";
 import DinnersWidget from "@/components/widgets/DinnersWidget";
@@ -37,6 +38,32 @@ export default function DashboardWidgets() {
     () => setExpandedIndex((i) => (i === null ? null : (i + 1) % WIDGETS.length)),
     []
   );
+
+  // Timezone evaluation: compare client vs server "today" once on mount
+  useEffect(() => {
+    getTimeContextComparison()
+      .then((cmp) => {
+        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+          body: JSON.stringify({
+            sessionId: "79a07d",
+            location: "DashboardWidgets.tsx:timeContext",
+            message: "Timezone eval: client vs server today",
+            data: {
+              clientToday: cmp.client.todayKey,
+              clientTimezone: cmp.client.timezone,
+              serverTodayUTC: cmp.server.serverTodayUTC,
+              sameCalendarDay: cmp.sameCalendarDay,
+              clientTodayVsServerToday: cmp.clientTodayVsServerToday,
+            },
+            timestamp: Date.now(),
+            hypothesisId: "H0",
+          }),
+        }).catch(() => {});
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (expandedIndex === null) return;

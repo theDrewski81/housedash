@@ -22,6 +22,22 @@ export async function GET(request: Request) {
     const timezone = searchParams.get("timezone") ?? "UTC";
     const calendarIdOverride = searchParams.get("calendarId");
 
+    // #region agent log
+    const serverNow = new Date();
+    fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+      body: JSON.stringify({
+        sessionId: "79a07d",
+        location: "app/api/widgets/schedule/route.ts",
+        message: "Schedule API: timezone param and server now",
+        data: { timezone, serverNow: serverNow.toISOString() },
+        timestamp: Date.now(),
+        hypothesisId: "H3",
+      }),
+    }).catch(() => {});
+    // #endregion
+
     const config = await getAppConfig();
     const calendarConfigs = config.calendarConfigs;
 

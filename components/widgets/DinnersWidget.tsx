@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Widget from "@/components/ui/Widget";
 import { format, addDays, startOfDay, parseISO } from "date-fns";
+import { getClientTimeContext } from "@/lib/timezone-eval";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   TrashIcon,
@@ -266,6 +267,21 @@ export default function DinnersWidget({
     queryFn: async () => {
       const startDate = format(today, "yyyy-MM-dd");
       const endDate = format(addDays(today, 6), "yyyy-MM-dd");
+      // #region agent log
+      const ctx = getClientTimeContext();
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+        body: JSON.stringify({
+          sessionId: "79a07d",
+          location: "DinnersWidget.tsx:dinners queryFn",
+          message: "Dinners widget: client today and range",
+          data: { clientToday: ctx.todayKey, timezone: ctx.timezone, startDate, endDate },
+          timestamp: Date.now(),
+          hypothesisId: "H1_H2",
+        }),
+      }).catch(() => {});
+      // #endregion
       const res = await fetch(
         `/api/widgets/dinners?startDate=${startDate}&endDate=${endDate}`
       );
@@ -287,6 +303,21 @@ export default function DinnersWidget({
     queryKey: ["dinners-recent", format(today, "yyyy-MM-dd")],
     queryFn: async () => {
       const asOf = format(today, "yyyy-MM-dd");
+      // #region agent log
+      const ctx = getClientTimeContext();
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "79a07d" },
+        body: JSON.stringify({
+          sessionId: "79a07d",
+          location: "DinnersWidget.tsx:recent queryFn",
+          message: "Dinners recent: client asOf (local today)",
+          data: { asOf, clientToday: ctx.todayKey, timezone: ctx.timezone },
+          timestamp: Date.now(),
+          hypothesisId: "H1",
+        }),
+      }).catch(() => {});
+      // #endregion
       const res = await fetch(`/api/widgets/dinners/recent?asOf=${asOf}`);
       if (!res.ok) throw new Error("Failed to fetch recent dinners");
       return res.json();
