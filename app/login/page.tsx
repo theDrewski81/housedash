@@ -41,6 +41,19 @@ function LoginContent() {
             body: JSON.stringify(p),
           }).catch(() => {});
         });
+        const flushPayload = {
+          sessionId: "146b76",
+          location: "app/login/page.tsx:flush",
+          message: "server buffer flushed into debug log",
+          data: { count: payloads.length, errorParam },
+          hypothesisId: "H3",
+          timestamp: Date.now(),
+        };
+        fetch("/api/debug-log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(flushPayload),
+        }).catch(() => {});
       })
       .catch(() => {});
   }, [errorParam, showGenericError]);
