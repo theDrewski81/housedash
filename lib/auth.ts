@@ -123,6 +123,14 @@ export const authOptions = {
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             fs.appendFileSync(debugLogPath, JSON.stringify(payload) + "\n");
           } catch { /* noop */ }
+          const baseUrl = process.env.NEXTAUTH_URL;
+          if (baseUrl) {
+            fetch(`${baseUrl.replace(/\/$/, "")}/api/debug-log`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }).catch(() => {});
+          }
           fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
@@ -243,6 +251,14 @@ export const authOptions = {
           if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
           fs.appendFileSync(signInLogPath, JSON.stringify(payload) + "\n");
         } catch { /* noop */ }
+        const baseUrl = process.env.NEXTAUTH_URL;
+        if (baseUrl) {
+          fetch(`${baseUrl.replace(/\/$/, "")}/api/debug-log`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }).catch(() => {});
+        }
         fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(payload) }).catch(() => {});
       };
       signInLog("signIn callback entry", { userId: user?.id, email: user?.email, provider: account?.provider }, "H4");
