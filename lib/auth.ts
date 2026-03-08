@@ -139,18 +139,27 @@ export const authOptions = {
         if (typeof token === "string" && token.includes(" ")) {
           token = token.replace(/ /g, "+");
         }
-        const tokenMatches = !!(token && process.env.KIOSK_TOKEN && token === process.env.KIOSK_TOKEN);
+        // URL/query parsing can drop trailing "=" (base64 padding). Normalize so both sides compare equal.
+        const normalizeToken = (t: string) => t + "=".repeat((4 - (t.length % 4)) % 4);
+        const envToken = process.env.KIOSK_TOKEN;
+        const normalizedToken = typeof token === "string" ? normalizeToken(token) : "";
+        const normalizedEnv = envToken ? normalizeToken(envToken) : "";
+        const tokenMatches = !!(normalizedToken && normalizedEnv && normalizedToken === normalizedEnv);
         // #region agent log
-        logIngest("after token fix", { tokenMatches, hasToken: !!token, hasEnv: !!process.env.KIOSK_TOKEN }, "H1");
+        logIngest("after token fix", { tokenMatches, hasToken: !!token, tokenLen: typeof token === "string" ? token.length : 0, normalizedLen: normalizedToken.length }, "H1");
         // #endregion
-        if (!token || token !== process.env.KIOSK_TOKEN) {
+        if (!normalizedToken || normalizedToken !== normalizedEnv) {
           // #region agent log
           logIngest("authorize return null", { reason: "token_invalid" }, "H1");
           // #endregion
           return null;
         }
+        const rawToken = typeof token === "string" ? token : "";
         let user = await prisma.user.findFirst({
-          where: { kioskToken: token },
+          where:
+            rawToken && rawToken !== normalizedToken
+              ? { OR: [{ kioskToken: normalizedToken }, { kioskToken: rawToken }] }
+              : { kioskToken: normalizedToken },
         });
         // #region agent log
         logIngest("after findFirst", { userFound: !!user, userId: user?.id, status: user?.status }, "H2");
@@ -164,7 +173,7 @@ export const authOptions = {
               data: {
                 email: "kiosk@household.local",
                 name: "Kiosk",
-                kioskToken: token,
+                kioskToken: normalizedToken,
                 status: "active",
                 role: "user",
               },
@@ -184,7 +193,7 @@ export const authOptions = {
               if (existing) {
                 user = await prisma.user.update({
                   where: { id: existing.id },
-                  data: { kioskToken: token },
+                  data: { kioskToken: normalizedToken },
                 });
                 // #region agent log
                 logIngest("kiosk user updated (P2002)", { userId: user.id, status: user.status }, "H2");

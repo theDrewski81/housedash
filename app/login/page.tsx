@@ -54,6 +54,11 @@ function LoginContent() {
     if (!kioskToken && typeof window !== "undefined") {
       kioskToken = localStorage.getItem("kioskToken");
     }
+    // URL parsing can drop trailing "=" (base64 padding). Restore so server receives full token.
+    if (typeof kioskToken === "string" && kioskToken.length > 0) {
+      const pad = (4 - (kioskToken.length % 4)) % 4;
+      if (pad) kioskToken = kioskToken + "=".repeat(pad);
+    }
 
     if (kioskToken) {
       kioskAttempted.current = true;
