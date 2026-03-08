@@ -1,7 +1,9 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { UserRole, UserStatus } from "@prisma/client";
+import fs from "fs";
 import { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
+import path from "path";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { getAppConfig } from "./app-config";
@@ -113,11 +115,18 @@ export const authOptions = {
       async authorize(credentials) {
         let token = credentials?.token;
         // #region agent log
+        const debugLogPath = path.join(process.cwd(), ".cursor", "debug-146b76.log");
         const logIngest = (message: string, data: Record<string, unknown>, hypothesisId: string) => {
+          const payload = { sessionId: "146b76", location: "lib/auth.ts:authorize", message, data, hypothesisId, timestamp: Date.now() };
+          try {
+            const dir = path.dirname(debugLogPath);
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+            fs.appendFileSync(debugLogPath, JSON.stringify(payload) + "\n");
+          } catch { /* noop */ }
           fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-            body: JSON.stringify({ sessionId: "146b76", location: "lib/auth.ts:authorize", message, data, hypothesisId, timestamp: Date.now() }),
+            body: JSON.stringify(payload),
           }).catch(() => {});
         };
         logIngest("authorize entry", {
@@ -211,14 +220,17 @@ export const authOptions = {
   callbacks: {
     async signIn({ user, account }) {
       // #region agent log
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-        body: JSON.stringify({
-          sessionId: "146b76", location: "lib/auth.ts:signIn", message: "signIn callback entry",
-          data: { userId: user?.id, email: user?.email, provider: account?.provider }, hypothesisId: "H4", timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      const signInLogPath = path.join(process.cwd(), ".cursor", "debug-146b76.log");
+      const signInLog = (message: string, data: Record<string, unknown>, hypothesisId: string) => {
+        const payload = { sessionId: "146b76", location: "lib/auth.ts:signIn", message, data, hypothesisId, timestamp: Date.now() };
+        try {
+          const dir = path.dirname(signInLogPath);
+          if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+          fs.appendFileSync(signInLogPath, JSON.stringify(payload) + "\n");
+        } catch { /* noop */ }
+        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(payload) }).catch(() => {});
+      };
+      signInLog("signIn callback entry", { userId: user?.id, email: user?.email, provider: account?.provider }, "H4");
       // #endregion
       // NextAuth passes a prototype user (name, email, image) without id for first-time OAuth sign-ins.
       // Look up by id first; if no id, fall back to email for manually added users.
@@ -249,14 +261,7 @@ export const authOptions = {
         return true;
       })();
       // #region agent log
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-        body: JSON.stringify({
-          sessionId: "146b76", location: "lib/auth.ts:signIn", message: "signIn callback result",
-          data: { dbUserFound: !!dbUser, status: dbUser?.status, result: result === true ? true : result === false ? false : String(result) }, hypothesisId: "H4", timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      signInLog("signIn callback result", { dbUserFound: !!dbUser, status: dbUser?.status, result: result === true ? true : result === false ? false : String(result) }, "H4");
       // #endregion
       return result;
     },

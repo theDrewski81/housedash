@@ -31,14 +31,9 @@ function LoginContent() {
     const search = typeof window !== "undefined" ? window.location.search : "";
     // #region agent log
     if (search.includes("kiosk=") || search.includes("kiosk")) {
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-        body: JSON.stringify({
-          sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "effect run",
-          data: { isTablet, kioskAttempted: kioskAttempted.current, search: search.slice(0, 80) }, hypothesisId: "H3", timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      const payload = { sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "effect run", data: { isTablet, kioskAttempted: kioskAttempted.current, search: search.slice(0, 80) }, hypothesisId: "H3", timestamp: Date.now() };
+      fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }).catch(() => {});
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(payload) }).catch(() => {});
     }
     // #endregion
     // Kiosk only on tablet; phones get standard mobile (Google sign-in only)
@@ -64,14 +59,9 @@ function LoginContent() {
       kioskAttempted.current = true;
       const tokenForForm = encodeURIComponent(kioskToken);
       // #region agent log
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-        body: JSON.stringify({
-          sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "before signIn",
-          data: { kioskTokenLen: kioskToken?.length, tokenForFormLen: tokenForForm?.length, isTablet }, hypothesisId: "H1,H3", timestamp: Date.now(),
-        }),
-      }).catch(() => {});
+      const beforePayload = { sessionId: "146b76", location: "app/login/page.tsx:useEffect", message: "before signIn", data: { kioskTokenLen: kioskToken?.length, tokenForFormLen: tokenForForm?.length, isTablet }, hypothesisId: "H1,H3", timestamp: Date.now() };
+      fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(beforePayload) }).catch(() => {});
+      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(beforePayload) }).catch(() => {});
       // #endregion
       signIn("kiosk", {
         token: tokenForForm,
@@ -79,14 +69,9 @@ function LoginContent() {
         redirect: true,
       }).then((res) => {
         // #region agent log
-        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" },
-          body: JSON.stringify({
-            sessionId: "146b76", location: "app/login/page.tsx:signIn.then", message: "signIn result",
-            data: { ok: res?.ok, error: res?.error, status: res?.status, url: res?.url?.slice(0, 60) }, hypothesisId: "H4,H5", timestamp: Date.now(),
-          }),
-        }).catch(() => {});
+        const resPayload = { sessionId: "146b76", location: "app/login/page.tsx:signIn.then", message: "signIn result", data: { ok: res?.ok, error: res?.error, status: res?.status, url: res?.url?.slice(0, 60) }, hypothesisId: "H4,H5", timestamp: Date.now() };
+        fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(resPayload) }).catch(() => {});
+        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(resPayload) }).catch(() => {});
         // #endregion
         if (res?.ok) {
           localStorage.setItem("kioskToken", kioskToken);
