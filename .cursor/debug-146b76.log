@@ -2,3 +2,7 @@
 {"sessionId":"146b76","location":"app/login/page.tsx:useEffect","message":"before signIn","data":{"kioskTokenLen":25,"tokenForFormLen":27,"isTablet":true},"hypothesisId":"H1,H3","timestamp":1773007623937}
 {"sessionId":"146b76","location":"app/login/page.tsx:useEffect","message":"effect run","data":{"isTablet":true,"kioskAttempted":false,"search":"?kiosk=Wo1w5F9ki0aZkZqIecNF3eeV="},"hypothesisId":"H3","timestamp":1773007623936}
 {"sessionId":"146b76","location":"app/login/page.tsx:signIn.then","message":"signIn result","data":{},"hypothesisId":"H4,H5","timestamp":1773007624159}
+{"sessionId":"146b76","location":"app/login/page.tsx:useEffect","message":"effect run","data":{"isTablet":false,"kioskAttempted":false,"search":"?kiosk=Wo1w5F9ki0aZkZqIecNF3eeV="},"hypothesisId":"H3","timestamp":1773008937247}
+{"sessionId":"146b76","location":"app/login/page.tsx:useEffect","message":"effect run","data":{"isTablet":true,"kioskAttempted":false,"search":"?kiosk=Wo1w5F9ki0aZkZqIecNF3eeV="},"hypothesisId":"H3","timestamp":1773008937251}
+{"sessionId":"146b76","location":"app/login/page.tsx:useEffect","message":"before signIn","data":{"kioskTokenLen":28,"tokenForFormLen":36,"isTablet":true},"hypothesisId":"H1,H3","timestamp":1773008937251}
+{"sessionId":"146b76","location":"app/login/page.tsx:signIn.then","message":"signIn result","data":{},"hypothesisId":"H4,H5","timestamp":1773008937697}

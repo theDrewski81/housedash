@@ -139,27 +139,31 @@ export const authOptions = {
         if (typeof token === "string" && token.includes(" ")) {
           token = token.replace(/ /g, "+");
         }
-        // URL/query parsing can drop trailing "=" (base64 padding). Normalize so both sides compare equal.
-        const normalizeToken = (t: string) => t + "=".repeat((4 - (t.length % 4)) % 4);
-        const envToken = process.env.KIOSK_TOKEN;
-        const normalizedToken = typeof token === "string" ? normalizeToken(token) : "";
-        const normalizedEnv = envToken ? normalizeToken(envToken) : "";
-        const tokenMatches = !!(normalizedToken && normalizedEnv && normalizedToken === normalizedEnv);
+        // URL/query parsing can drop trailing "=". Compare by trimming trailing "=" so both forms match.
+        const trimPadding = (t: string) => t.replace(/=+$/, "");
+        const envToken = process.env.KIOSK_TOKEN ?? "";
+        const receivedTrimmed = typeof token === "string" ? trimPadding(token) : "";
+        const envTrimmed = trimPadding(envToken);
+        const tokenMatches = !!(receivedTrimmed && envTrimmed && receivedTrimmed === envTrimmed);
         // #region agent log
-        logIngest("after token fix", { tokenMatches, hasToken: !!token, tokenLen: typeof token === "string" ? token.length : 0, normalizedLen: normalizedToken.length }, "H1");
+        logIngest("after token fix", { tokenMatches, hasToken: !!token, tokenLen: typeof token === "string" ? token.length : 0, receivedTrimmedLen: receivedTrimmed.length }, "H1");
         // #endregion
-        if (!normalizedToken || normalizedToken !== normalizedEnv) {
+        if (!receivedTrimmed || receivedTrimmed !== envTrimmed) {
           // #region agent log
           logIngest("authorize return null", { reason: "token_invalid" }, "H1");
           // #endregion
           return null;
         }
-        const rawToken = typeof token === "string" ? token : "";
+        // DB may store token with or without trailing "="; look up by both.
+        const canonicalToken = envTrimmed + "="; // prefer one "=" for storage so stored form is stable
         let user = await prisma.user.findFirst({
-          where:
-            rawToken && rawToken !== normalizedToken
-              ? { OR: [{ kioskToken: normalizedToken }, { kioskToken: rawToken }] }
-              : { kioskToken: normalizedToken },
+          where: {
+            OR: [
+              { kioskToken: receivedTrimmed },
+              { kioskToken: canonicalToken },
+              { kioskToken: typeof token === "string" ? token : "" },
+            ].filter((o) => o.kioskToken !== ""),
+          },
         });
         // #region agent log
         logIngest("after findFirst", { userFound: !!user, userId: user?.id, status: user?.status }, "H2");
@@ -173,7 +177,7 @@ export const authOptions = {
               data: {
                 email: "kiosk@household.local",
                 name: "Kiosk",
-                kioskToken: normalizedToken,
+                kioskToken: canonicalToken,
                 status: "active",
                 role: "user",
               },
@@ -193,7 +197,7 @@ export const authOptions = {
               if (existing) {
                 user = await prisma.user.update({
                   where: { id: existing.id },
-                  data: { kioskToken: normalizedToken },
+                  data: { kioskToken: canonicalToken },
                 });
                 // #region agent log
                 logIngest("kiosk user updated (P2002)", { userId: user.id, status: user.status }, "H2");
