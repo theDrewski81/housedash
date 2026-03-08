@@ -11,6 +11,9 @@ import { prisma } from "./db/prisma";
 
 const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
 
+/** Session lasts 14 days from login (per device); no sliding expiry. */
+const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
+
 function parseNameToFirstLast(name: string | null | undefined): {
   firstName: string | null;
   lastName: string | null;
@@ -235,6 +238,23 @@ export const authOptions = {
   },
   session: {
     strategy: "database",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    updateAge: 0, // Expire 14 days from login, do not extend on activity
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NEXTAUTH_URL?.startsWith("https://")
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        maxAge: SESSION_MAX_AGE_SECONDS,
+      },
+    },
   },
 } as NextAuthOptions;
 
