@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 
 type LogEntry = {
   id: string;
@@ -93,8 +92,7 @@ export default function AdminLogsPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Logs</h1>
 
         <section className="bg-gray-800 rounded-lg p-6 border border-gray-700">
@@ -220,6 +218,5 @@ export default function AdminLogsPage() {
           <div className="text-red-400">Failed to load logs.</div>
         )}
       </div>
-    </DashboardLayout>
   );
 }

@@ -5,20 +5,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import type { AppSession } from "@/lib/session";
 
 interface DashboardLayoutProps {
   children: ReactNode;
+  /** When provided (e.g. from server layout for kiosk), used instead of useSession so kiosk users see the header and can sign out. */
+  session?: AppSession | null;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { data: session, status } = useSession();
+export default function DashboardLayout({ children, session: sessionProp }: DashboardLayoutProps) {
+  const { data: nextAuthSession, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const session = sessionProp ?? nextAuthSession;
   const isOnSettings =
     pathname?.startsWith("/dashboard/admin/") ?? false;
   const isAdmin = session?.user?.role === "admin";
+  const isKiosk = session != null && "isKiosk" in session && (session as AppSession).isKiosk === true;
 
-  if (status === "loading") {
+  if (sessionProp === undefined && status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-gray-400">Loading...</div>
@@ -30,6 +35,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     router.push("/login");
     return null;
   }
+
+  const handleSignOut = () => {
+    if (isKiosk) {
+      fetch("/api/auth/kiosk-signout", { method: "POST", credentials: "include" })
+        .then(() => router.push("/login"))
+        .catch(() => router.push("/login"));
+    } else {
+      signOut({ callbackUrl: "/login" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900" data-dashboard-layout="with-admin-nav">
@@ -63,7 +78,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
               <span className="text-gray-300">{session.user?.name}</span>
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={handleSignOut}
                 className="text-gray-400 hover:text-white transition-colors"
               >
                 Sign Out

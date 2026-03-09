@@ -107,43 +107,24 @@ function LoginContent() {
 
     if (kioskToken) {
       kioskAttempted.current = true;
-      const tokenForForm = encodeURIComponent(kioskToken);
-      // #region agent log
-      const beforePayload = {
-        sessionId: "146b76",
-        location: "app/login/page.tsx:useEffect",
-        message: "before signIn",
-        data: {
-          viewportWidth: viewportW,
-          viewportHeight: viewportH,
-          meetsKioskRequirements,
-          tabletMinWidth,
-          isTablet,
-          kioskTokenLen: kioskToken?.length,
-          tokenForFormLen: tokenForForm?.length,
-        },
-        hypothesisId: "H1,H3",
-        timestamp: Date.now(),
-      };
-      fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(beforePayload) }).catch(() => {});
-      fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(beforePayload) }).catch(() => {});
-      // #endregion
-      signIn("kiosk", {
-        token: tokenForForm,
-        callbackUrl: "/dashboard",
-        redirect: true,
-      }).then((res) => {
-        // #region agent log
-        const resPayload = { sessionId: "146b76", location: "app/login/page.tsx:signIn.then", message: "signIn result", data: { ok: res?.ok, error: res?.error, status: res?.status, url: res?.url?.slice(0, 60) }, hypothesisId: "H4,H5", timestamp: Date.now() };
-        fetch("/api/debug-log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(resPayload) }).catch(() => {});
-        fetch("http://127.0.0.1:7832/ingest/c0ef89d9-077f-4a38-976e-46e2b7cf1042", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "146b76" }, body: JSON.stringify(resPayload) }).catch(() => {});
-        // #endregion
-        if (res?.ok) {
-          localStorage.setItem("kioskToken", kioskToken);
-        }
-      });
+      // Kiosk uses dedicated API + signed cookie (bypasses NextAuth Credentials)
+      fetch("/api/auth/kiosk-signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ token: kioskToken }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            localStorage.setItem("kioskToken", kioskToken);
+            router.replace("/dashboard");
+          } else {
+            router.replace("/login?error=CredentialsSignin");
+          }
+        })
+        .catch(() => router.replace("/login?error=CredentialsSignin"));
     }
-  }, [isTablet]);
+  }, [isTablet, router]);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-24">

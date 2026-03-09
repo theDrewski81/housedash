@@ -1,10 +1,9 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "./auth";
+import { getSession } from "./session";
 import { prisma } from "./db/prisma";
 import type { User } from "@prisma/client";
 
 export async function getCurrentUser(): Promise<(User & { role: User["role"]; status: User["status"] }) | null> {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session?.user?.id) {
     return null;
   }

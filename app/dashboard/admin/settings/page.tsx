@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import UserManagementSettings from "@/components/admin/UserManagementSettings";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -261,8 +260,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <h1 className="text-2xl font-bold text-white">Settings</h1>
 
         {loading ? (
@@ -491,6 +489,5 @@ export default function AdminSettingsPage() {
           </>
         )}
       </div>
-    </DashboardLayout>
   );
 }

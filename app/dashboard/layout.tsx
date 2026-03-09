@@ -1,14 +1,14 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { ReactNode } from "react";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 export default async function DashboardLayoutServer({
   children,
 }: {
   children: ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   if (!session) {
     redirect("/login");
   }
@@ -16,5 +16,5 @@ export default async function DashboardLayoutServer({
   if (status === "pending_approval") {
     redirect("/login/pending");
   }
-  return <>{children}</>;
+  return <DashboardLayout session={session}>{children}</DashboardLayout>;
 }
