@@ -60,7 +60,7 @@ To run the dashboard in full-screen kiosk style (no browser chrome):
    - **Edge (Windows):** Menu → “Apps” → “Install this site as an app”.
 3. Open the app from the home screen (or Start menu). It will open in **fullscreen** with no tabs or URL bar.
 
-Optional: add `public/icon-192.png` and `public/icon-512.png` for a proper install icon; otherwise the browser may use a default.
+The app ships with `public/icon.svg` for the install icon. For best results on all devices you can add `public/icon-192.png` and `public/icon-512.png` (PNG icons).
 
 **Security:** Use `KIOSK_TOKEN` only in `.env`; never commit it. Only use the `?kiosk=...` URL on the tablet. Phones do not use kiosk and always see the normal Google sign-in.
 

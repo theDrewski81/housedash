@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -13,6 +13,24 @@ interface DashboardLayoutProps {
   session?: AppSession | null;
 }
 
+function useIsStandaloneOrFullscreen(): boolean {
+  const [value, setValue] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mqStandalone = window.matchMedia("(display-mode: standalone)");
+    const mqFullscreen = window.matchMedia("(display-mode: fullscreen)");
+    const check = () => setValue(mqStandalone.matches || mqFullscreen.matches);
+    check();
+    mqStandalone.addEventListener("change", check);
+    mqFullscreen.addEventListener("change", check);
+    return () => {
+      mqStandalone.removeEventListener("change", check);
+      mqFullscreen.removeEventListener("change", check);
+    };
+  }, []);
+  return value;
+}
+
 export default function DashboardLayout({ children, session: sessionProp }: DashboardLayoutProps) {
   const { data: nextAuthSession, status } = useSession();
   const router = useRouter();
@@ -22,6 +40,9 @@ export default function DashboardLayout({ children, session: sessionProp }: Dash
     pathname?.startsWith("/dashboard/admin/") ?? false;
   const isAdmin = session?.user?.role === "admin";
   const isKiosk = session != null && "isKiosk" in session && (session as AppSession).isKiosk === true;
+  const isStandaloneOrFullscreen = useIsStandaloneOrFullscreen();
+  const [kioskHintDismissed, setKioskHintDismissed] = useState(false);
+  const showKioskInstallHint = isKiosk && !isStandaloneOrFullscreen && !kioskHintDismissed;
 
   if (sessionProp === undefined && status === "loading") {
     return (
@@ -87,6 +108,21 @@ export default function DashboardLayout({ children, session: sessionProp }: Dash
           </div>
         </div>
       </header>
+      {showKioskInstallHint && (
+        <div className="bg-amber-900/30 border-b border-amber-700/50 px-4 py-2 flex items-center justify-between gap-4 flex-wrap">
+          <p className="text-amber-200 text-sm">
+            For full-screen kiosk (no browser bar): add this app to your home screen, then open it from there.
+          </p>
+          <button
+            type="button"
+            onClick={() => setKioskHintDismissed(true)}
+            className="text-amber-400 hover:text-amber-200 text-sm shrink-0"
+            aria-label="Dismiss"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
