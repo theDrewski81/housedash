@@ -49,6 +49,19 @@ Use the exact same string as in `.env` for `KIOSK_TOKEN`.
   The app will sign in and redirect to the dashboard. The token is stored on the tablet for next time.
 - **Later:** Open `https://your-app-url/login` on the same tablet; if the stored token is still present, it will sign in automatically.
 
+### Full-screen kiosk (no browser tabs or URL bar)
+
+To run the dashboard in full-screen kiosk style (no browser chrome):
+
+1. On the tablet, open the app in the browser and sign in with kiosk (or go to the login URL with `?kiosk=...`).
+2. **Install the app** so it opens in its own window:
+   - **Chrome (Android):** Menu → “Install app” or “Add to Home screen”.
+   - **Safari (iOS):** Share → “Add to Home Screen”.
+   - **Edge (Windows):** Menu → “Apps” → “Install this site as an app”.
+3. Open the app from the home screen (or Start menu). It will open in **fullscreen** with no tabs or URL bar.
+
+Optional: add `public/icon-192.png` and `public/icon-512.png` for a proper install icon; otherwise the browser may use a default.
+
 **Security:** Use `KIOSK_TOKEN` only in `.env`; never commit it. Only use the `?kiosk=...` URL on the tablet. Phones do not use kiosk and always see the normal Google sign-in.
 
 ## Tablet vs phone
