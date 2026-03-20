@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { AppSession } from "@/lib/session";
+import HourlyPageRefresh from "@/components/layout/HourlyPageRefresh";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -69,6 +70,7 @@ export default function DashboardLayout({ children, session: sessionProp }: Dash
 
   return (
     <div className="min-h-screen bg-gray-900" data-dashboard-layout="with-admin-nav">
+      <HourlyPageRefresh />
       <header className="bg-gray-800 border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">

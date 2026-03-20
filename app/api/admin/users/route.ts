@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { DEFAULT_ACCENT_COLORS } from "@/lib/default-accent-colors";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/app-config";
 import type { UserRole, UserStatus } from "@prisma/client";
+
+const HEX_ACCENT_COLOR = /^#[0-9A-Fa-f]{6}$/;
 
 function handleAuthError(e: unknown): NextResponse {
   const err = e as Error & { status?: number };
@@ -39,6 +42,7 @@ export async function GET() {
         name: true,
         status: true,
         role: true,
+        accentColor: true,
         createdAt: true,
       },
       orderBy: { createdAt: "asc" },
@@ -100,6 +104,9 @@ export async function POST(request: NextRequest) {
     }
 
     const name = [firstName, lastName].filter(Boolean).join(" ").trim() || null;
+    const userCount = await prisma.user.count();
+    const accentColor =
+      DEFAULT_ACCENT_COLORS[userCount % DEFAULT_ACCENT_COLORS.length];
     const user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
@@ -108,6 +115,7 @@ export async function POST(request: NextRequest) {
         name,
         role,
         status,
+        accentColor,
       },
     });
 
@@ -134,6 +142,7 @@ type UserUpdateItem = {
   lastName?: string | null;
   status?: UserStatus;
   role?: UserRole;
+  accentColor?: string | null;
 };
 
 type ApprovalItem = {
@@ -158,6 +167,21 @@ export async function PATCH(request: NextRequest) {
   }
   try {
     const body = (await request.json()) as PatchBody;
+    if (body.users?.length) {
+      for (const u of body.users) {
+        if (u.accentColor === undefined) continue;
+        if (
+          u.accentColor !== null &&
+          (typeof u.accentColor !== "string" ||
+            !HEX_ACCENT_COLOR.test(u.accentColor))
+        ) {
+          return NextResponse.json(
+            { error: "Invalid user color (use #RRGGBB)" },
+            { status: 400 }
+          );
+        }
+      }
+    }
     const rejectedEmails: { userId: string; email?: string }[] = [];
     const results: {
       approved: { email: string }[];
@@ -201,6 +225,9 @@ export async function PATCH(request: NextRequest) {
                 ...(u.lastName !== undefined && { lastName: u.lastName }),
                 ...(u.status !== undefined && { status: u.status }),
                 ...(u.role !== undefined && { role: u.role }),
+                ...(u.accentColor !== undefined && {
+                  accentColor: u.accentColor,
+                }),
               },
             });
             results.updated.push({
@@ -271,6 +298,7 @@ export async function PATCH(request: NextRequest) {
           ...(u.lastName !== undefined && { lastName: u.lastName }),
           ...(u.status !== undefined && { status: u.status }),
           ...(u.role !== undefined && { role: u.role }),
+          ...(u.accentColor !== undefined && { accentColor: u.accentColor }),
         },
       });
     }

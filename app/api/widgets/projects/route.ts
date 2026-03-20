@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getHouseholdUserId, requireAuth } from "@/lib/auth-helpers";
+import { getHouseholdUserId } from "@/lib/auth-helpers";
+import {
+  parseOwnerUserIdFromBody,
+  projectTodoWithOwnerInclude,
+  serializeProjectTodo,
+  validateOwnerUserIdOrNull,
+} from "@/lib/project-todo-api";
 import { prisma } from "@/lib/db/prisma";
 import { ProjectTodoStatus } from "@prisma/client";
 
@@ -30,9 +36,10 @@ export async function GET(request: NextRequest) {
     const todos = await prisma.projectTodo.findMany({
       where: { userId: householdUserId },
       orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      include: projectTodoWithOwnerInclude,
     });
 
-    return NextResponse.json(todos);
+    return NextResponse.json(todos.map(serializeProjectTodo));
   } catch (error) {
     console.error("Projects API error:", error);
     return NextResponse.json(
@@ -68,18 +75,38 @@ export async function POST(request: NextRequest) {
             ? ProjectTodoStatus.COMPLETE
             : ProjectTodoStatus.NOT_READY;
 
+    const bodyRecord = body as Record<string, unknown>;
+    const ownerPatch = parseOwnerUserIdFromBody(bodyRecord);
+    if (ownerPatch.mode === "invalid") {
+      return NextResponse.json(
+        { error: "Invalid ownerUserId" },
+        { status: 400 }
+      );
+    }
+    const ownerUserId =
+      ownerPatch.mode === "omit" ? null : ownerPatch.value;
+    const ownerCheck = await validateOwnerUserIdOrNull(ownerUserId);
+    if (!ownerCheck.ok) {
+      return NextResponse.json(
+        { error: ownerCheck.message },
+        { status: 400 }
+      );
+    }
+
     const todo = await prisma.projectTodo.create({
       data: {
         userId: householdUserId,
+        ownerUserId,
         title,
         priority,
         initialPriority: priority,
         status,
         completedAt: status === ProjectTodoStatus.COMPLETE ? new Date() : null,
       },
+      include: projectTodoWithOwnerInclude,
     });
 
-    return NextResponse.json(todo);
+    return NextResponse.json(serializeProjectTodo(todo));
   } catch (error) {
     console.error("Projects API error:", error);
     return NextResponse.json(

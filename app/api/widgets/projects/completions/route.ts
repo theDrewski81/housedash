@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { getHouseholdUserId } from "@/lib/auth-helpers";
+import {
+  projectTodoWithOwnerInclude,
+  serializeProjectTodo,
+} from "@/lib/project-todo-api";
 import { prisma } from "@/lib/db/prisma";
 
 export async function GET() {
@@ -12,9 +16,10 @@ export async function GET() {
         completedAt: { not: null },
       },
       orderBy: { completedAt: "desc" },
+      include: projectTodoWithOwnerInclude,
     });
 
-    return NextResponse.json(completions);
+    return NextResponse.json(completions.map(serializeProjectTodo));
   } catch (error) {
     console.error("Projects completions API error:", error);
     return NextResponse.json(

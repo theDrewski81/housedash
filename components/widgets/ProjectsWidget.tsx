@@ -34,6 +34,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import {
+  matchesKanbanFilters,
+  type KanbanPriorityFilter,
+} from "@/lib/kanban-todo-filters";
 
 const DEFAULT_COLUMNS: { id: string; label: string; color: string }[] = [
   { id: "NOT_READY", label: "Step 0", color: "" },
@@ -53,6 +57,20 @@ interface ProjectTodo {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  ownerUserId: string | null;
+  ownerFirstName: string | null;
+  /** From owner user's Existing Users color; null if Shared or unset. */
+  ownerAccentColor: string | null;
+}
+
+interface AssignableOwner {
+  id: string;
+  firstName: string | null;
+}
+
+function ownerSelectLabel(firstName: string | null): string {
+  const t = firstName?.trim();
+  return t && t.length > 0 ? t : "—";
 }
 
 interface ProjectsConfig {
@@ -85,12 +103,14 @@ function ProjectCard({
   columnColor,
   previousColumnColors,
   onDelete,
+  onBeginEdit,
   isCollapsing,
 }: {
   todo: ProjectTodo;
   columnColor: string;
   previousColumnColors: string[];
   onDelete: (id: string) => void;
+  onBeginEdit?: (todo: ProjectTodo) => void;
   isCollapsing?: boolean;
 }) {
   const trailColors = previousColumnColors.filter(Boolean);
@@ -107,18 +127,48 @@ function ProjectCard({
         }
       : undefined;
 
+  const ownerStripe =
+    todo.ownerUserId && todo.ownerAccentColor ? todo.ownerAccentColor : null;
+
   return (
     <div
-      className={`rounded bg-gray-700 px-3 py-2 transition-all duration-500 ${
-        isCollapsing ? "overflow-hidden opacity-0 max-h-0 py-0 px-0 m-0" : ""
+      className={`flex min-h-0 rounded bg-gray-700 transition-all duration-500 ${
+        isCollapsing ? "overflow-hidden opacity-0 max-h-0 m-0" : ""
       }`}
       style={{ ...bgStyle, ...trailStyle }}
     >
+      {ownerStripe ? (
+        <div
+          className="w-1 shrink-0 self-stretch min-h-[2.75rem]"
+          style={{ backgroundColor: ownerStripe }}
+          aria-hidden
+        />
+      ) : null}
+      <div
+        className={`min-w-0 flex-1 px-3 py-2 flex flex-col justify-center ${
+          isCollapsing ? "py-0 px-0" : ""
+        }`}
+      >
       <div className="flex items-center justify-between gap-2 min-w-0">
-        <div className="min-w-0 flex-1">
+        <div
+          className="min-w-0 flex-1"
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            onBeginEdit?.(todo);
+          }}
+          title="Double-click to edit"
+        >
           <div className="font-medium truncate">{todo.title}</div>
           <div className="text-xs text-gray-400">
             P{todo.priority} · {format(parseISO(todo.createdAt), "MMM d")}
+            {todo.ownerUserId ? (
+              <>
+                {" · "}
+                <span className="text-gray-300">
+                  {ownerSelectLabel(todo.ownerFirstName)}
+                </span>
+              </>
+            ) : null}
           </div>
         </div>
         <button
@@ -127,11 +177,13 @@ function ProjectCard({
             e.stopPropagation();
             onDelete(todo.id);
           }}
+          onDoubleClick={(e) => e.stopPropagation()}
           className="shrink-0 text-gray-400 hover:text-red-400 p-1"
           aria-label="Delete"
         >
           <TrashIcon className="h-4 w-4" />
         </button>
+      </div>
       </div>
     </div>
   );
@@ -142,12 +194,14 @@ function DraggableProjectCard({
   columnColor,
   previousColumnColors,
   onDelete,
+  onBeginEdit,
   isCollapsing,
 }: {
   todo: ProjectTodo;
   columnColor: string;
   previousColumnColors: string[];
   onDelete: (id: string) => void;
+  onBeginEdit?: (todo: ProjectTodo) => void;
   isCollapsing?: boolean;
 }) {
   const {
@@ -177,6 +231,7 @@ function DraggableProjectCard({
         columnColor={columnColor}
         previousColumnColors={previousColumnColors}
         onDelete={onDelete}
+        onBeginEdit={onBeginEdit}
         isCollapsing={isCollapsing}
       />
     </div>
@@ -190,6 +245,7 @@ function KanbanColumn({
   previousColumnColors,
   todos,
   onDelete,
+  onBeginEdit,
   animatingOutIds,
 }: {
   columnId: string;
@@ -198,6 +254,7 @@ function KanbanColumn({
   previousColumnColors: string[];
   todos: ProjectTodo[];
   onDelete: (id: string) => void;
+  onBeginEdit?: (todo: ProjectTodo) => void;
   animatingOutIds: Set<string>;
 }) {
   const { isOver, setNodeRef } = useDroppable({
@@ -226,6 +283,7 @@ function KanbanColumn({
             columnColor={color}
             previousColumnColors={previousColumnColors}
             onDelete={onDelete}
+            onBeginEdit={onBeginEdit}
             isCollapsing={animatingOutIds.has(todo.id)}
           />
         ))}
@@ -263,10 +321,28 @@ export default function ProjectsWidget({
   const [completionsTab, setCompletionsTab] = useState<"list" | "priority" | "time">("list");
   const [completeWindowIds, setCompleteWindowIds] = useState<Set<string>>(new Set());
   const [animatingOutIds, setAnimatingOutIds] = useState<Set<string>>(new Set());
+  const [priorityFilter, setPriorityFilter] =
+    useState<KanbanPriorityFilter>("all");
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "shared" | string>(
+    "all"
+  );
   const [newTodo, setNewTodo] = useState({
     title: "",
     priority: 2,
     status: "NOT_READY" as ProjectTodoStatus,
+    ownerUserId: "" as string,
+  });
+  const [editingTodo, setEditingTodo] = useState<ProjectTodo | null>(null);
+  const [editDraft, setEditDraft] = useState<{
+    title: string;
+    priority: 1 | 2 | 3;
+    status: ProjectTodoStatus;
+    ownerUserId: string;
+  }>({
+    title: "",
+    priority: 2,
+    status: "NOT_READY",
+    ownerUserId: "",
   });
 
   const { data: todos = [], isLoading } = useQuery<ProjectTodo[]>({
@@ -306,15 +382,38 @@ export default function ProjectsWidget({
     },
   });
 
+  const { data: assignableOwners = [] } = useQuery<AssignableOwner[]>({
+    queryKey: ["projects-assignable-owners"],
+    queryFn: async () => {
+      const res = await fetch("/api/widgets/projects/assignable-owners");
+      if (!res.ok) throw new Error("Failed to load owners");
+      return res.json();
+    },
+  });
+
   const columns = useMemo(
     () => parseProjectsConfig(prefs?.projectsConfig),
     [prefs?.projectsConfig]
   );
 
+  const filteredTodos = useMemo(() => {
+    return todos.filter((todo) =>
+      matchesKanbanFilters(todo, priorityFilter, ownerFilter)
+    );
+  }, [todos, priorityFilter, ownerFilter]);
+
+  const kanbanFiltersActive =
+    priorityFilter !== "all" || ownerFilter !== "all";
+
+  const clearKanbanFilters = useCallback(() => {
+    setPriorityFilter("all");
+    setOwnerFilter("all");
+  }, []);
+
   const todosByStatus = useMemo(() => {
     const map: Record<string, ProjectTodo[]> = {};
     for (const col of columns) {
-      let filtered = todos.filter((t) => t.status === col.id);
+      let filtered = filteredTodos.filter((t) => t.status === col.id);
       if (col.id === "COMPLETE") {
         filtered = filtered.filter((t) => completeWindowIds.has(t.id));
       }
@@ -324,10 +423,15 @@ export default function ProjectsWidget({
       });
     }
     return map;
-  }, [todos, columns, completeWindowIds]);
+  }, [filteredTodos, columns, completeWindowIds]);
 
   const createMutation = useMutation({
-    mutationFn: async (body: { title: string; priority: number; status: ProjectTodoStatus }) => {
+    mutationFn: async (body: {
+      title: string;
+      priority: number;
+      status: ProjectTodoStatus;
+      ownerUserId: string | null;
+    }) => {
       const res = await fetch("/api/widgets/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -340,7 +444,12 @@ export default function ProjectsWidget({
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["projects-counts"] });
       setShowAddForm(false);
-      setNewTodo({ title: "", priority: 2, status: "NOT_READY" });
+      setNewTodo({
+        title: "",
+        priority: 2,
+        status: "NOT_READY",
+        ownerUserId: "",
+      });
     },
   });
 
@@ -350,7 +459,12 @@ export default function ProjectsWidget({
       data,
     }: {
       id: string;
-      data: { status?: ProjectTodoStatus };
+      data: {
+        status?: ProjectTodoStatus;
+        title?: string;
+        priority?: number;
+        ownerUserId?: string | null;
+      };
     }) => {
       const res = await fetch(`/api/widgets/projects/${id}`, {
         method: "PATCH",
@@ -430,7 +544,37 @@ export default function ProjectsWidget({
       title: newTodo.title.trim(),
       priority: newTodo.priority,
       status: newTodo.status,
+      ownerUserId: newTodo.ownerUserId === "" ? null : newTodo.ownerUserId,
     });
+  };
+
+  const beginEditTodo = useCallback((todo: ProjectTodo) => {
+    const p = todo.priority;
+    const safeP = (p === 1 || p === 2 || p === 3 ? p : 2) as 1 | 2 | 3;
+    setEditingTodo(todo);
+    setEditDraft({
+      title: todo.title,
+      priority: safeP,
+      status: todo.status,
+      ownerUserId: todo.ownerUserId ?? "",
+    });
+  }, []);
+
+  const handleSaveEdit = () => {
+    if (!editingTodo || !editDraft.title.trim()) return;
+    updateMutation.mutate(
+      {
+        id: editingTodo.id,
+        data: {
+          title: editDraft.title.trim(),
+          priority: editDraft.priority,
+          status: editDraft.status,
+          ownerUserId:
+            editDraft.ownerUserId === "" ? null : editDraft.ownerUserId,
+        },
+      },
+      { onSuccess: () => setEditingTodo(null) }
+    );
   };
 
   useEffect(() => {
@@ -439,6 +583,19 @@ export default function ProjectsWidget({
       clearExpandToView?.();
     }
   }, [isExpanded, expandToView, clearExpandToView]);
+
+  useEffect(() => {
+    if (view !== "kanban") setEditingTodo(null);
+  }, [view]);
+
+  useEffect(() => {
+    if (!editingTodo) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEditingTodo(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editingTodo]);
 
   const priorityChartData = useMemo(() => {
     const byPriority: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
@@ -477,6 +634,7 @@ export default function ProjectsWidget({
   }, [completions]);
 
   const kanbanContent = (
+    <>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">Kanban</h3>
@@ -486,6 +644,54 @@ export default function ProjectsWidget({
           className="rounded bg-blue-600 px-3 py-1 text-sm hover:bg-blue-700"
         >
           {showAddForm ? "Cancel" : "Add Todo"}
+        </button>
+      </div>
+
+      <div
+        className="flex flex-wrap items-end gap-3 rounded border border-gray-600 bg-gray-800/40 p-3"
+        role="group"
+        aria-label="Kanban filters"
+      >
+        <label className="flex flex-col gap-1 text-xs text-gray-400">
+          <span>Priority</span>
+          <select
+            value={priorityFilter}
+            onChange={(e) =>
+              setPriorityFilter(e.target.value as KanbanPriorityFilter)
+            }
+            className="rounded bg-gray-600 px-2 py-1.5 text-sm text-white min-w-[6rem]"
+            aria-label="Filter by priority"
+          >
+            <option value="all">All</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-gray-400">
+          <span>Owner</span>
+          <select
+            value={ownerFilter}
+            onChange={(e) => setOwnerFilter(e.target.value)}
+            className="rounded bg-gray-600 px-2 py-1.5 text-sm text-white min-w-[9rem]"
+            aria-label="Filter by owner"
+          >
+            <option value="all">All</option>
+            <option value="shared">Shared</option>
+            {assignableOwners.map((u) => (
+              <option key={u.id} value={u.id}>
+                {ownerSelectLabel(u.firstName)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={clearKanbanFilters}
+          disabled={!kanbanFiltersActive}
+          className="rounded border border-gray-500 bg-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Clear filters
         </button>
       </div>
 
@@ -501,7 +707,7 @@ export default function ProjectsWidget({
             className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
             aria-label="Project title"
           />
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm">
               Priority:
               <select
@@ -538,6 +744,24 @@ export default function ProjectsWidget({
                 ))}
               </select>
             </label>
+            <label className="flex items-center gap-2 text-sm">
+              Owner:
+              <select
+                value={newTodo.ownerUserId}
+                onChange={(e) =>
+                  setNewTodo((t) => ({ ...t, ownerUserId: e.target.value }))
+                }
+                className="rounded bg-gray-600 px-2 py-1 min-w-[8rem]"
+                aria-label="Owner"
+              >
+                <option value="">Shared</option>
+                {assignableOwners.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {ownerSelectLabel(u.firstName)}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <button
             type="button"
@@ -564,6 +788,7 @@ export default function ProjectsWidget({
                 previousColumnColors={columns.slice(0, idx).map((c) => c.color)}
                 todos={todosByStatus[col.id] ?? []}
                 onDelete={(id) => deleteMutation.mutate(id)}
+                onBeginEdit={beginEditTodo}
                 animatingOutIds={animatingOutIds}
               />
             ))}
@@ -579,6 +804,110 @@ export default function ProjectsWidget({
         View Completions
       </button>
     </div>
+
+    {editingTodo && (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+        role="presentation"
+        onClick={() => setEditingTodo(null)}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-todo-title"
+          className="w-full max-w-md space-y-3 rounded-lg bg-gray-800 p-4 shadow-xl border border-gray-600"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h4 id="edit-todo-title" className="font-semibold text-lg">
+            Edit todo
+          </h4>
+          <input
+            type="text"
+            value={editDraft.title}
+            onChange={(e) =>
+              setEditDraft((d) => ({ ...d, title: e.target.value }))
+            }
+            className="w-full rounded bg-gray-600 px-3 py-2 text-sm"
+            aria-label="Todo title"
+            autoFocus
+          />
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              Priority:
+              <select
+                value={editDraft.priority}
+                onChange={(e) =>
+                  setEditDraft((d) => ({
+                    ...d,
+                    priority: Number(e.target.value) as 1 | 2 | 3,
+                  }))
+                }
+                className="rounded bg-gray-600 px-2 py-1"
+              >
+                <option value={1}>1</option>
+                <option value={2}>2</option>
+                <option value={3}>3</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              Status:
+              <select
+                value={editDraft.status}
+                onChange={(e) =>
+                  setEditDraft((d) => ({
+                    ...d,
+                    status: e.target.value as ProjectTodoStatus,
+                  }))
+                }
+                className="rounded bg-gray-600 px-2 py-1"
+              >
+                {columns.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              Owner:
+              <select
+                value={editDraft.ownerUserId}
+                onChange={(e) =>
+                  setEditDraft((d) => ({ ...d, ownerUserId: e.target.value }))
+                }
+                className="rounded bg-gray-600 px-2 py-1 min-w-[8rem]"
+                aria-label="Owner"
+              >
+                <option value="">Shared</option>
+                {assignableOwners.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {ownerSelectLabel(u.firstName)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditingTodo(null)}
+              className="rounded bg-gray-600 px-3 py-2 text-sm hover:bg-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveEdit}
+              disabled={!editDraft.title.trim() || updateMutation.isPending}
+              className="rounded bg-green-600 px-3 py-2 text-sm hover:bg-green-700 disabled:opacity-50"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 
   const completionsContent = (
@@ -651,6 +980,11 @@ export default function ProjectsWidget({
                 >
                   <span className="font-medium">{c.title}</span>
                   <span className="text-gray-400">P{c.priority}</span>
+                  <span className="text-gray-400">
+                    {c.ownerUserId
+                      ? ownerSelectLabel(c.ownerFirstName)
+                      : "Shared"}
+                  </span>
                   {priorityChange && (
                     <span className="text-amber-400">{priorityChange}</span>
                   )}

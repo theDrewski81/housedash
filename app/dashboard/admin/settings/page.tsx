@@ -5,6 +5,7 @@ import Link from "next/link";
 import CollapsibleSection from "@/components/ui/CollapsibleSection";
 import UserManagementSettings from "@/components/admin/UserManagementSettings";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { DEFAULT_ACCENT_COLORS } from "@/lib/default-accent-colors";
 
 type CalendarConfig = { id: string; color?: string };
 
@@ -24,15 +25,6 @@ type SchemaStatusResponse = {
   weatherLocationSupported?: boolean;
   calendarConfigsSupported?: boolean;
 };
-
-const DEFAULT_CALENDAR_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-];
 
 const DEFAULT_PROJECT_COLUMNS: ProjectColumnConfig[] = [
   { id: "NOT_READY", label: "Step 0", color: "" },
@@ -172,8 +164,8 @@ export default function AdminSettingsPage() {
     if (!id) return;
     if (calendarConfigs.some((c) => c.id === id)) return;
     const color =
-      DEFAULT_CALENDAR_COLORS[
-        calendarConfigs.length % DEFAULT_CALENDAR_COLORS.length
+      DEFAULT_ACCENT_COLORS[
+        calendarConfigs.length % DEFAULT_ACCENT_COLORS.length
       ];
     setCalendarConfigs([...calendarConfigs, { id, color }]);
     setNewCalendarId("");
@@ -360,7 +352,7 @@ export default function AdminSettingsPage() {
                     >
                       <input
                         type="color"
-                        value={cal.color ?? DEFAULT_CALENDAR_COLORS[0]}
+                        value={cal.color ?? DEFAULT_ACCENT_COLORS[0]}
                         onChange={(e) =>
                           handleCalendarColorChange(index, e.target.value)
                         }

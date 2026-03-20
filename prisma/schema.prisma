@@ -32,6 +32,7 @@ model User {
   lastName      String?     @map("last_name")
   image         String?
   kioskToken    String?     @unique @map("kiosk_token")
+  accentColor   String?     @map("accent_color") // #RRGGBB for UI (calendars / user list)
   role          UserRole?
   status        UserStatus?  @default(active)
   createdAt     DateTime    @default(now()) @map("created_at")
@@ -44,8 +45,9 @@ model User {
   groceries       Grocery[]
   budgetIncomes   BudgetIncome[]
   budgetExpenses  BudgetExpense[]
-  projectTodos    ProjectTodo[]
-  preferences     UserPreferences?
+  projectTodos       ProjectTodo[]
+  ownedProjectTodos  ProjectTodo[] @relation("ProjectTodoOwner")
+  preferences        UserPreferences?
   auditLogsDone   AdminAuditLog[] @relation("AdminAuditLogAdmin")
 
   @@map("users")
@@ -145,6 +147,8 @@ model ProjectTodo {
   id              String            @id @default(cuid())
   userId          String            @map("user_id")
   user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownerUserId     String?           @map("owner_user_id")
+  ownerUser       User?             @relation("ProjectTodoOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   title           String
   priority        Int               // 1, 2, or 3
   initialPriority Int?              @map("initial_priority") // Set when created; used for completion analytics

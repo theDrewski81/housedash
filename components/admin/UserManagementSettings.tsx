@@ -7,6 +7,7 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline";
 import type { UserRole, UserStatus } from "@prisma/client";
+import { DEFAULT_ACCENT_COLORS } from "@/lib/default-accent-colors";
 
 type UserRow = {
   id: string;
@@ -17,6 +18,8 @@ type UserRow = {
   status: UserStatus | null;
   role: UserRole | null;
   createdAt: string;
+  /** #RRGGBB; always set in UI after load (default palette if unset in DB). */
+  accentColor: string;
 };
 
 type ApprovalRow = {
@@ -239,12 +242,27 @@ export default function UserManagementSettings() {
       const settings = await settingsRes.json();
       const { users: userList } = await usersRes.json();
       setAllowAccountCreation(settings.allowAccountCreation ?? false);
-      setUsers(userList ?? []);
-      const pending = (userList ?? []).filter(
-        (u: UserRow) => u.status === "pending_approval"
+      const raw = (userList ?? []) as (Omit<UserRow, "accentColor"> & {
+        accentColor?: string | null;
+      })[];
+      setUsers(
+        raw.map((u, i) => {
+          const c = u.accentColor;
+          const valid =
+            typeof c === "string" && /^#[0-9A-Fa-f]{6}$/.test(c);
+          return {
+            ...u,
+            accentColor: valid
+              ? c
+              : DEFAULT_ACCENT_COLORS[i % DEFAULT_ACCENT_COLORS.length],
+          };
+        })
+      );
+      const pending = raw.filter(
+        (u) => u.status === "pending_approval"
       );
       setApprovalRows(
-        pending.map((u: UserRow) => ({
+        pending.map((u) => ({
           userId: u.id,
           firstName: u.firstName,
           lastName: u.lastName,
@@ -276,6 +294,7 @@ export default function UserManagementSettings() {
           lastName: u.lastName ?? undefined,
           status: u.status ?? undefined,
           role: u.role ?? undefined,
+          accentColor: u.accentColor,
         }));
       const approvalQueue = approvalRows
         .filter((r) => r.action !== "")
@@ -489,6 +508,7 @@ export default function UserManagementSettings() {
               <th className="py-2 pr-4">Email</th>
               <th className="py-2 pr-4">Status</th>
               <th className="py-2 pr-4">Role</th>
+              <th className="py-2 pr-4">Color</th>
               <th className="py-2 pr-4 w-24">Actions</th>
             </tr>
           </thead>
@@ -549,6 +569,18 @@ export default function UserManagementSettings() {
                       </option>
                     ))}
                   </select>
+                </td>
+                <td className="py-2 pr-4">
+                  <input
+                    type="color"
+                    value={u.accentColor}
+                    onChange={(e) =>
+                      updateUser(u.id, { accentColor: e.target.value })
+                    }
+                    className="h-9 w-9 cursor-pointer rounded border border-gray-600 bg-transparent p-0"
+                    title="User color"
+                    aria-label={`Color for ${u.firstName ?? u.email}`}
+                  />
                 </td>
                 <td className="py-2 pr-4 flex gap-2">
                   <button
