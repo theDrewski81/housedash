@@ -12,10 +12,11 @@ function LoginContent() {
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
   const errorParam = searchParams.get("error");
-  const showAccountCreationDisabled =
-    errorParam === "OAuthCreateAccount" || errorParam === "Callback";
+  const showAccountCreationDisabled = errorParam === "OAuthCreateAccount";
   const showConfigError =
-    errorParam === "OAuthCallback" || errorParam === "OAuthSignin";
+    errorParam === "OAuthCallback" ||
+    errorParam === "OAuthSignin" ||
+    errorParam === "Callback";
   const showGenericError =
     !!errorParam &&
     !showAccountCreationDisabled &&

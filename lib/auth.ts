@@ -67,17 +67,17 @@ export const authOptions = {
         return user as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
       }
 
-      if (!config.allowAccountCreation) {
-        const err = new Error(ACCOUNT_CREATION_DISABLED_ERROR) as Error & { code?: string };
-        err.code = "ACCOUNT_CREATION_DISABLED";
-        throw err;
-      }
-
       const existing = await prisma.user.findFirst({
         where: { email: { equals: data.email, mode: "insensitive" } },
       });
       if (existing) {
         return existing as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
+      }
+
+      if (!config.allowAccountCreation) {
+        const err = new Error(ACCOUNT_CREATION_DISABLED_ERROR) as Error & { code?: string };
+        err.code = "ACCOUNT_CREATION_DISABLED";
+        throw err;
       }
 
       const user = await prisma.user.create({
