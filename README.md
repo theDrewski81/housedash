@@ -68,7 +68,8 @@ docker compose up -d
 If you sign in with Google but end up on the login page again (sometimes with `?error=Callback` in the URL):
 
 1. **NEXTAUTH_URL must match the browser URL**  
-   Set `NEXTAUTH_URL` in `.env` to the **exact** URL you use to open the app (no trailing slash), e.g. `https://dash.susknet.com`. Restart the app after changing.
+   Set `NEXTAUTH_URL` in `.env` to the **exact** URL you use to open the app (no trailing slash), e.g. `https://dash.susknet.com`. Restart the app after changing.  
+   **Docker / LAN:** If you open `http://192.168.x.x:3000` (or your server hostname), `NEXTAUTH_URL` must be that origin—not `http://localhost:3000` unless you truly use localhost in the browser.
 
 2. **Google OAuth redirect URI**  
    In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your OAuth 2.0 Client ID → **Authorized redirect URIs**, add exactly:  

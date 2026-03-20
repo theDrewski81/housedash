@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useIsTablet } from "@/lib/hooks/useIsTablet";
 
 function LoginContent() {
@@ -11,6 +11,7 @@ function LoginContent() {
   const { status } = useSession();
   const isTablet = useIsTablet();
   const kioskAttempted = useRef(false);
+  const [browserOrigin, setBrowserOrigin] = useState("");
   const errorParam = searchParams.get("error");
   const showAccountCreationDisabled = errorParam === "OAuthCreateAccount";
   const showConfigError =
@@ -21,6 +22,12 @@ function LoginContent() {
     !!errorParam &&
     !showAccountCreationDisabled &&
     !showConfigError;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBrowserOrigin(window.location.origin);
+    }
+  }, []);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -138,10 +145,39 @@ function LoginContent() {
             </p>
           )}
           {showConfigError && (
-            <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
-              Sign-in failed. Check NEXTAUTH_URL and proxy configuration (see
-              README troubleshooting).
-            </p>
+            <div className="text-amber-200 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded space-y-2">
+              <p className="font-medium text-amber-400">
+                Sign-in failed (OAuth callback / configuration).
+              </p>
+              <p className="text-gray-300">
+                Most often <code className="bg-gray-900 px-1 rounded">NEXTAUTH_URL</code> on the
+                server does not match the address you use in the browser, or a reverse proxy is not
+                forwarding <code className="bg-gray-900 px-1">Host</code> and{" "}
+                <code className="bg-gray-900 px-1">X-Forwarded-Proto</code>.
+              </p>
+              {browserOrigin ? (
+                <ul className="text-xs text-gray-300 list-disc pl-4 space-y-1.5">
+                  <li>
+                    You opened this page at:{" "}
+                    <code className="bg-gray-900 px-1 rounded break-all">{browserOrigin}</code>
+                    . Set <code className="bg-gray-900 px-1">NEXTAUTH_URL</code> in the server{" "}
+                    <code className="bg-gray-900 px-1">.env</code> to exactly that value (no trailing
+                    slash; same <code className="bg-gray-900 px-1">http</code> vs{" "}
+                    <code className="bg-gray-900 px-1">https</code>). Then restart the app.
+                  </li>
+                  <li>
+                    In Google Cloud Console → OAuth 2.0 Client → Authorized redirect URIs, include:{" "}
+                    <code className="bg-gray-900 px-1 rounded break-all">
+                      {browserOrigin}/api/auth/callback/google
+                    </code>
+                  </li>
+                  <li>
+                    See README → &quot;Troubleshooting: login sends me back to the login screen&quot;
+                    for proxy examples.
+                  </li>
+                </ul>
+              ) : null}
+            </div>
           )}
           {showGenericError && (
             <p className="text-amber-400 text-sm mb-4 p-3 bg-amber-900/20 border border-amber-700 rounded">
