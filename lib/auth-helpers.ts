@@ -1,6 +1,9 @@
 import { getSession } from "./session";
 import { prisma } from "./db/prisma";
 import type { User } from "@prisma/client";
+import { isAdministrationRole } from "./user-roles";
+
+export { isAdministrationRole } from "./user-roles";
 
 export async function getCurrentUser(): Promise<(User & { role: User["role"]; status: User["status"] }) | null> {
   const session = await getSession();
@@ -8,9 +11,19 @@ export async function getCurrentUser(): Promise<(User & { role: User["role"]; st
     return null;
   }
 
-  return prisma.user.findUnique({
+  const byId = await prisma.user.findUnique({
     where: { id: session.user.id },
   });
+  if (byId) return byId;
+
+  const email = session.user.email;
+  if (typeof email === "string" && email.trim()) {
+    return prisma.user.findFirst({
+      where: { email: { equals: email.trim(), mode: "insensitive" } },
+    });
+  }
+
+  return null;
 }
 
 export async function requireAuth() {
@@ -38,7 +51,7 @@ export async function requireAdmin(): Promise<User> {
     err.status = 401;
     throw err;
   }
-  if (user.role === "admin") return user;
+  if (isAdministrationRole(user.role)) return user;
   // Single user in the system is treated as admin so they can access admin and set their role
   const userCount = await prisma.user.count();
   if (userCount === 1) return user;

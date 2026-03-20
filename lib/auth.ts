@@ -331,18 +331,50 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = (token.userId as string) ?? (token.sub as string);
-        if (token.role != null) (session.user as { role?: UserRole }).role = token.role as UserRole;
-        if (token.status != null) (session.user as { status?: UserStatus }).status = token.status as UserStatus;
-        // If this is the only user in the system, treat as admin
-        if ((session.user as { role?: UserRole }).role !== "admin" && session.user.id) {
-          const userCount = await prisma.user.count();
-          if (userCount === 1) {
-            (session.user as { role?: UserRole }).role = "admin";
-          }
+      if (!session.user) return session;
+
+      const idFromToken =
+        (typeof token.userId === "string" && token.userId) ||
+        (typeof token.sub === "string" && token.sub) ||
+        "";
+
+      let dbUser =
+        idFromToken.length > 0
+          ? await prisma.user.findUnique({
+              where: { id: idFromToken },
+              select: { id: true, role: true, status: true },
+            })
+          : null;
+
+      const email = session.user.email;
+      if (!dbUser && email) {
+        dbUser = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+          select: { id: true, role: true, status: true },
+        });
+      }
+
+      const userCount = await prisma.user.count();
+
+      if (dbUser) {
+        session.user.id = dbUser.id;
+        let role: UserRole | undefined = dbUser.role ?? undefined;
+        if (userCount === 1) role = "admin";
+        (session.user as { role?: UserRole }).role = role;
+        (session.user as { status?: UserStatus }).status =
+          dbUser.status ?? undefined;
+      } else {
+        session.user.id = idFromToken || session.user.id;
+        if (token.role != null)
+          (session.user as { role?: UserRole }).role = token.role as UserRole;
+        if (token.status != null)
+          (session.user as { status?: UserStatus }).status =
+            token.status as UserStatus;
+        if (userCount === 1 && session.user.id) {
+          (session.user as { role?: UserRole }).role = "admin";
         }
       }
+
       return session;
     },
   },

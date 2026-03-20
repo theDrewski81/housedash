@@ -9,7 +9,11 @@ export default async function AdminLayout({
 }) {
   try {
     await requireAdmin();
-  } catch {
+  } catch (e) {
+    const err = e as Error & { status?: number };
+    if (err.status === 401) {
+      redirect("/login");
+    }
     redirect("/dashboard");
   }
   return <>{children}</>;

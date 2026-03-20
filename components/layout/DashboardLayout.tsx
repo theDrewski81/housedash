@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import type { AppSession } from "@/lib/session";
+import { isAdministrationRole } from "@/lib/user-roles";
 import HourlyPageRefresh from "@/components/layout/HourlyPageRefresh";
 
 interface DashboardLayoutProps {
@@ -39,7 +40,7 @@ export default function DashboardLayout({ children, session: sessionProp }: Dash
   const session = sessionProp ?? nextAuthSession;
   const isOnSettings =
     pathname?.startsWith("/dashboard/admin/") ?? false;
-  const isAdmin = session?.user?.role === "admin";
+  const isAdmin = isAdministrationRole(session?.user?.role);
   const isKiosk = session != null && "isKiosk" in session && (session as AppSession).isKiosk === true;
   const isStandaloneOrFullscreen = useIsStandaloneOrFullscreen();
   const [kioskHintDismissed, setKioskHintDismissed] = useState(false);
