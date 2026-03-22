@@ -48,6 +48,8 @@ NextAuth and OAuth callbacks must use the **public** URL that users (and Cloudfl
 
 - **Do not** use `http://localhost:3000` or the VM’s private IP for `NEXTAUTH_URL` when accessing the app through the tunnel.
 
+- Optional: if OAuth still fails with `?error=OAuthCallback` after the above, set `AUTH_TRUST_HOST=1` so NextAuth v4 builds the callback origin from `X-Forwarded-Host` / `X-Forwarded-Proto` (Cloudflare Tunnel usually sends these). Only use this if those headers are correct.
+
 ## 4. Google OAuth redirect URI
 
 In [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → your OAuth 2.0 Client ID → Authorized redirect URIs, add:

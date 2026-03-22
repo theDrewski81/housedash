@@ -85,7 +85,15 @@ If you sign in with Google but end up on the login page again (sometimes with `?
    Example for **Caddy**: reverse_proxy usually sets these automatically.  
    Example for **Cloudflare Tunnel**: the tunnel forwards the original Host by default; if you proxy again behind it, that inner proxy must forward Host.
 
-4. **See the exact error in logs**  
+   **NextAuth v4 note:** It only uses those forwarded headers for the OAuth “origin” when `AUTH_TRUST_HOST` is set (or on Vercel). Otherwise it relies on `NEXTAUTH_URL` alone. If your proxy headers are correct, you can set `AUTH_TRUST_HOST=1` in `.env` and restart; if headers are wrong, leave it unset and keep `NEXTAUTH_URL` exact.
+
+4. **Confirm the running app sees `NEXTAUTH_URL`**  
+   Users can exist in Postgres and still fail at the OAuth callback (before your `signIn` callback runs). Verify the container/process env, e.g. `docker compose exec app sh -c 'echo "$NEXTAUTH_URL"'` (adjust shell if needed). It must be exactly `https://dash.susknet.com` with no trailing slash.
+
+5. **Google Cloud “Testing” OAuth consent**  
+   If the OAuth consent screen is in **Testing**, only users listed under **Test users** can sign in. Everyone else fails at Google or on callback. Use **Production** or add test users.
+
+6. **See the exact error in logs**  
    Set `NEXTAUTH_DEBUG=1` in `.env`, restart the app, try signing in again, then run `docker compose logs app` (or `docker logs housedash-app`) and look for `[NextAuth]` lines. That will show the real cause (e.g. state mismatch, missing code_verifier, or adapter error).
 
 ### "The table `public.accounts` does not exist" (or other tables)

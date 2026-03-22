@@ -15,6 +15,10 @@ const ACCOUNT_CREATION_DISABLED_ERROR = "Account creation is disabled";
 /** Session lasts 14 days from login (per device); no sliding expiry. */
 const SESSION_MAX_AGE_SECONDS = 14 * 24 * 60 * 60;
 
+/** Align PKCE/state/csrf cookies with public URL (init uses this for __Secure- / __Host- names). */
+const useSecureCookies =
+  process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+
 function parseNameToFirstLast(name: string | null | undefined): {
   firstName: string | null;
   lastName: string | null;
@@ -95,7 +99,8 @@ export const authOptions = {
       return user as ReturnType<typeof baseAdapter.createUser> extends Promise<infer U> ? U : never;
     },
   },
-  trustHost: true, // required when behind Cloudflare Tunnel / reverse proxy
+  // Behind a proxy: NextAuth v4 reads trust from env AUTH_TRUST_HOST (not this key — "trustHost" is ignored).
+  useSecureCookies,
   debug: process.env.NEXTAUTH_DEBUG === "1",
   logger: {
     error(code, metadata) {
@@ -389,15 +394,14 @@ export const authOptions = {
   },
   cookies: {
     sessionToken: {
-      name:
-        process.env.NEXTAUTH_URL?.startsWith("https://")
-          ? "__Secure-next-auth.session-token"
-          : "next-auth.session-token",
+      name: useSecureCookies
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
+        secure: useSecureCookies,
         maxAge: SESSION_MAX_AGE_SECONDS,
       },
     },
