@@ -1,6 +1,9 @@
 Give me the commands required to apply and deploy these changes as a single, copy-ready script. Never include comments. Always use `sudo`.
 
 Review the codebase to see how the app is deployed (don't use conditions like "If using docker...")
+
+Create a new script specific to the needs of the current deployment
+
 Ensure any migration steps are discretely run to prioritize success.
 
 Assume the changes have already been committed and pushed to GitHub.
